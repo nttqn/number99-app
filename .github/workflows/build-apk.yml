@@ -26,7 +26,7 @@ jobs:
       # keep this file in sync. We regenerate it fresh on every build, then
       # patch in the AdMob App ID and INTERNET permission it needs.
       - name: Generate Android platform project
-        run: flutter create --platforms=android --org com.trungsmail --project-name number99 .
+        run: flutter create --platforms=android --org com.nttqn --project-name number99 .
 
       - name: Patch AndroidManifest.xml (AdMob + app label)
         env:
