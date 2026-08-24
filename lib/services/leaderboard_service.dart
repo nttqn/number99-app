@@ -16,7 +16,7 @@ import 'package:games_services/games_services.dart';
 /// this app has no iOS build target (see build-apk.yml, --platforms=android
 /// only), so anything else no-ops.
 class LeaderboardService {
-  static const _androidLeaderboardId = 'REPLACE_WITH_REAL_LEADERBOARD_ID';
+  static const _androidLeaderboardId = 'CgkIst2gm-UKEAIQAA';
 
   static bool get _isSupported => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
