@@ -414,11 +414,17 @@ class _PauseOverlay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black.withValues(alpha: 0.6),
+      // Fully opaque — unlike the game-over overlay, this one must hide the
+      // board completely. A translucent pause screen would let a player
+      // pause mid-round to study the grid at their leisure and beat the
+      // timer, which defeats the whole "find it before time runs out" rule.
+      color: const Color(0xFF1B5E20),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            const Icon(Icons.pause_circle_filled, color: Colors.white, size: 64),
+            const SizedBox(height: 12),
             const Text('TẠM DỪNG', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
             const SizedBox(height: 24),
             SizedBox(
