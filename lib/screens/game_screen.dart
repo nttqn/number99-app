@@ -197,7 +197,11 @@ class _GameScreenState extends State<GameScreen> {
                 ],
               ),
               if (_paused && !_gameOver)
-                _PauseOverlay(onResume: _togglePause, onRestart: _newGame),
+                _PauseOverlay(
+                  onResume: _togglePause,
+                  onRestart: _newGame,
+                  onExit: () => Navigator.of(context).pop(),
+                ),
               if (_gameOver)
                 _GameOverOverlay(
                   won: _won,
@@ -454,10 +458,15 @@ class _NumberCell extends StatelessWidget {
 }
 
 class _PauseOverlay extends StatelessWidget {
-  const _PauseOverlay({required this.onResume, required this.onRestart});
+  const _PauseOverlay({
+    required this.onResume,
+    required this.onRestart,
+    required this.onExit,
+  });
 
   final VoidCallback onResume;
   final VoidCallback onRestart;
+  final VoidCallback onExit;
 
   @override
   Widget build(BuildContext context) {
@@ -503,6 +512,16 @@ class _PauseOverlay extends StatelessWidget {
                 color: Colors.orange,
                 icon: Icons.refresh,
                 onPressed: onRestart,
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: 200,
+              child: PillButton(
+                label: 'VỀ MENU',
+                color: Colors.blueGrey,
+                icon: Icons.home,
+                onPressed: onExit,
               ),
             ),
           ],
