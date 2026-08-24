@@ -35,6 +35,7 @@ class PillButton extends StatelessWidget {
             onTap: onPressed,
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 border: Border(

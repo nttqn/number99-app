@@ -13,6 +13,7 @@ const int _gridRows = 11;
 const int _totalNumbers = _gridCols * _gridRows; // 99
 const double _roundSeconds = 10.0;
 const int _maxHints = 3;
+const int _hintPenalty = 10;
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -31,6 +32,7 @@ class _GameScreenState extends State<GameScreen> {
   Timer? _timer;
   bool _paused = false;
   bool _roundLocked = false;
+  bool _hintUsedThisRound = false;
   bool _gameOver = false;
   bool _won = false;
   int? _hintIndex;
@@ -79,6 +81,7 @@ class _GameScreenState extends State<GameScreen> {
     _target = remaining.first;
     _timeLeft = _roundSeconds;
     _roundLocked = false;
+    _hintUsedThisRound = false;
     _hintIndex = null;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(milliseconds: 100), _tick);
@@ -103,7 +106,7 @@ class _GameScreenState extends State<GameScreen> {
 
     if (value == _target) {
       _timer?.cancel();
-      final gained = (10 + (_timeLeft / _roundSeconds * 90)).round();
+      final gained = _hintUsedThisRound ? 0 : (10 + (_timeLeft / _roundSeconds * 90)).round();
       setState(() {
         _score += gained;
         _found.add(value);
@@ -130,6 +133,8 @@ class _GameScreenState extends State<GameScreen> {
     setState(() {
       _hintsLeft -= 1;
       _hintIndex = idx;
+      _hintUsedThisRound = true;
+      _score = max(0, _score - _hintPenalty);
     });
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (!mounted) return;
@@ -347,8 +352,8 @@ class _NumberCell extends StatelessWidget {
     Color bg = const Color(0xFF90CAF9);
     Color border = const Color(0xFF1565C0);
     if (found) {
-      bg = const Color(0xFFCFD8DC);
-      border = const Color(0xFF90A4AE);
+      bg = const Color(0xFFE0E6E8);
+      border = const Color(0xFFE0E6E8);
     } else if (wrongFlash) {
       bg = const Color(0xFFEF5350);
       border = const Color(0xFFB71C1C);
@@ -369,14 +374,16 @@ class _NumberCell extends StatelessWidget {
           border: Border.all(color: border, width: 2),
         ),
         alignment: Alignment.center,
-        child: Text(
-          '$value',
-          style: TextStyle(
-            fontWeight: FontWeight.w800,
-            fontSize: 15,
-            color: found ? Colors.white70 : Colors.white,
-          ),
-        ),
+        child: found
+            ? const Icon(Icons.check, size: 16, color: Color(0xFFB0BEC5))
+            : Text(
+                '$value',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15,
+                  color: Colors.white,
+                ),
+              ),
       ),
     );
   }
