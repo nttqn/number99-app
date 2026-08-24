@@ -1,19 +1,18 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
-/// AdMob wiring for this app. The ad unit IDs below are Google's public
-/// TEST ids — placeholders until this app has its own AdMob account
-/// entries. Swap them for real ad unit IDs (and set the ADMOB_APP_ID CI
-/// secret, see build-apk.yml) before a Play Store release; see
-/// [[feedback_release_signing_setup]] / dino-egg-shooter's admob_service.dart
-/// for how a sibling project wired real ones in.
+/// AdMob wiring for this app. Real ad unit IDs (same AdMob account as
+/// dino-egg-shooter, different ad units). The AdMob **App ID** (used in
+/// AndroidManifest.xml's meta-data, separate from these ad unit IDs) still
+/// isn't set — see the ADMOB_APP_ID GitHub secret in build-apk.yml, which
+/// falls back to Google's public TEST App ID until that's set.
 ///
 /// google_mobile_ads only supports Android/iOS; every entry point here
 /// no-ops elsewhere (web, desktop) so the game stays testable in those
 /// environments during development.
 class AdmobService {
-  static const _bannerId = 'ca-app-pub-3940256099942544/6300978111';
-  static const _interstitialId = 'ca-app-pub-3940256099942544/1033173712';
+  static const _bannerId = 'ca-app-pub-9078637596840810/5513332487';
+  static const _interstitialId = 'ca-app-pub-9078637596840810/4829149216';
 
   static bool get _isSupported =>
       !kIsWeb &&
