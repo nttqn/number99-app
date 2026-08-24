@@ -39,6 +39,21 @@ Single `StatefulWidget` holds all game state — no separate state-management pa
 
 `lib/services/admob_service.dart` currently uses **Google's public TEST ad unit IDs**, not real ones — this app doesn't have its own AdMob account entries yet. Before a real release: create a banner + interstitial ad unit for this app in the AdMob console, swap the two `_bannerId`/`_interstitialId` constants, and set the `ADMOB_APP_ID` GitHub secret (see the "Patch AndroidManifest.xml" CI step).
 
+## Leaderboard (Google Play Games Services)
+
+`lib/services/leaderboard_service.dart` wraps the `games_services` plugin (Android-only here — no iOS build target). Every call is wrapped in try/catch and no-ops silently on failure, the same defensive pattern as `AdmobService` — a leaderboard problem must never crash or interrupt gameplay. Wired in at: `GameScreen.initState`/`MainMenuScreen.initState` call `signIn()`, `_endGame` calls `submitScore(_score)`, and the menu's "BẢNG XẾP HẠNG" button calls `showLeaderboard()` (shows a SnackBar if it returns `false`, e.g. not signed in / not configured).
+
+**This is not functional yet** — two placeholders block it, both requiring the user to do things in the Google Play Console / Cloud Console that can't be done from here:
+
+1. `_androidLeaderboardId` in `leaderboard_service.dart` is literally `'REPLACE_WITH_REAL_LEADERBOARD_ID'`. `submitScore`/`showLeaderboard` both check for and no-op on this placeholder prefix.
+2. The `com.google.android.gms.games.APP_ID` manifest meta-data (patched in by CI's "Patch AndroidManifest.xml" step) comes from a `PLAY_GAMES_APP_ID` GitHub secret that isn't set yet — unlike AdMob there's no universal test ID to fall back to, so this step just omits the meta-data (with a `::warning::`) when unset.
+
+**What the user needs to do in Play Console** (this is the standard Play Games Services v2 setup flow, not specific to this repo): link/create a Play Games Services project for `com.nttqn.number99`, which requires an OAuth Android client keyed to the package name + the release keystore's SHA-1 (so [[feedback_release_signing_setup]] needs to happen first if it hasn't), get the resulting **Play Games Services App ID** (numeric), and create a **Leaderboard** resource to get its **Leaderboard ID** (long alphanumeric string, format like `CgkI...`). Once the user provides both: set `PLAY_GAMES_APP_ID` as a GitHub secret, and hardcode the leaderboard ID into `_androidLeaderboardId` directly (it's not sensitive, same treatment as the AdMob ad unit IDs — no need to route it through a secret).
+
+Default sign-in behavior is used (Play Games auto-prompts on launch) — no `MainActivity.kt` changes were needed for this. If the user ever wants sign-in silenced/optional rather than automatic, see the "Prevent auto sign-in on Android" section of the plugin's docs (needs a `PlayGamesInitProvider` manifest removal + `PlayGamesSdk.initialize()` in `MainActivity.kt`, which *would* need a CI patch step since `android/` is regenerated fresh every build).
+
+Not testable via the web-server / Chrome workflow used for everything else in this repo (`games_services` only supports Android/iOS/macOS) — `LeaderboardService`'s platform gate makes it no-op cleanly there, verified via Playwright (button renders, tap shows the "not available" SnackBar, no console errors), but the actual sign-in/submit/show flow can only be verified on a real Android device once the two placeholders above are filled in.
+
 ## Release signing
 
 Not yet set up for this app (no `.jks` generated). When the user is ready to publish, follow [[feedback_release_signing_setup]] — the exact flow (keytool location, non-interactive generation command, delivery/verification steps) that worked for dino-egg-shooter and chess-app.

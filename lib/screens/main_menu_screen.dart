@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../services/leaderboard_service.dart';
 import '../services/save_service.dart';
 import '../widgets/pill_button.dart';
 import 'game_screen.dart';
@@ -18,6 +19,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   void initState() {
     super.initState();
     _loadHighScore();
+    LeaderboardService.signIn();
   }
 
   Future<void> _loadHighScore() async {
@@ -30,6 +32,15 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
       MaterialPageRoute(builder: (_) => const GameScreen()),
     );
     _loadHighScore();
+  }
+
+  Future<void> _openLeaderboard() async {
+    final opened = await LeaderboardService.showLeaderboard();
+    if (!opened && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Bảng xếp hạng chưa khả dụng — cần đăng nhập tài khoản Google.')),
+      );
+    }
   }
 
   @override
@@ -90,6 +101,16 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                     color: Colors.green.shade600,
                     icon: Icons.play_arrow,
                     onPressed: _play,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: 220,
+                  child: PillButton(
+                    label: 'BẢNG XẾP HẠNG',
+                    color: Colors.blueGrey.shade600,
+                    icon: Icons.leaderboard,
+                    onPressed: _openLeaderboard,
                   ),
                 ),
               ],

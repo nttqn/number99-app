@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
 import '../services/admob_service.dart';
+import '../services/leaderboard_service.dart';
 import '../services/save_service.dart';
 import '../widgets/pill_button.dart';
 
@@ -47,6 +48,7 @@ class _GameScreenState extends State<GameScreen> {
     super.initState();
     _bannerAd = AdmobService.createBanner(onLoaded: () => setState(() {}));
     AdmobService.preloadInterstitial();
+    LeaderboardService.signIn();
     SaveService.getHighScore().then((v) {
       if (mounted) setState(() => _highScore = v);
     });
@@ -156,6 +158,7 @@ class _GameScreenState extends State<GameScreen> {
       _won = won;
       if (isNewHigh) _highScore = _score;
     });
+    LeaderboardService.submitScore(_score);
     AdmobService.showInterstitial();
   }
 
