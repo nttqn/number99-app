@@ -195,30 +195,43 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildGrid() {
+    const spacing = 3.0;
     return Padding(
       padding: const EdgeInsets.all(6),
-      child: GridView.builder(
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _totalNumbers,
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: _gridCols,
-          childAspectRatio: 0.82,
-          crossAxisSpacing: 3,
-          mainAxisSpacing: 3,
-        ),
-        itemBuilder: (context, index) {
-          final value = _board[index];
-          final isFound = _found.contains(value);
-          final isHint = _hintIndex == index;
-          final isWrong = _wrongFlashIndex == index;
-          final isCorrectFlash = _correctFlashIndex == index;
-          return _NumberCell(
-            value: value,
-            found: isFound,
-            hinted: isHint,
-            wrongFlash: isWrong,
-            correctFlash: isCorrectFlash,
-            onTap: () => _onCellTap(index),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Size each cell so the fixed 9x11 grid exactly fills the space
+          // this Expanded gives it — a fixed childAspectRatio (the previous
+          // approach) sizes rows off the available *width* only, so on a
+          // screen where the HUD/ad-banner/bottom-bar leave less height
+          // than that produces, the last row(s) render past the bottom of
+          // this box and get clipped behind the button bar.
+          final cellWidth = (constraints.maxWidth - spacing * (_gridCols - 1)) / _gridCols;
+          final cellHeight = (constraints.maxHeight - spacing * (_gridRows - 1)) / _gridRows;
+          return GridView.builder(
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: _totalNumbers,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: _gridCols,
+              childAspectRatio: cellWidth / cellHeight,
+              crossAxisSpacing: spacing,
+              mainAxisSpacing: spacing,
+            ),
+            itemBuilder: (context, index) {
+              final value = _board[index];
+              final isFound = _found.contains(value);
+              final isHint = _hintIndex == index;
+              final isWrong = _wrongFlashIndex == index;
+              final isCorrectFlash = _correctFlashIndex == index;
+              return _NumberCell(
+                value: value,
+                found: isFound,
+                hinted: isHint,
+                wrongFlash: isWrong,
+                correctFlash: isCorrectFlash,
+                onTap: () => _onCellTap(index),
+              );
+            },
           );
         },
       ),
