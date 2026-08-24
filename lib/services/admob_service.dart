@@ -25,7 +25,10 @@ class AdmobService {
     await MobileAds.instance.initialize();
   }
 
-  static BannerAd? createBanner({AdSize size = AdSize.banner, void Function()? onLoaded}) {
+  static BannerAd? createBanner({
+    AdSize size = AdSize.banner,
+    void Function()? onLoaded,
+  }) {
     if (!_isSupported) return null;
     final banner = BannerAd(
       adUnitId: _bannerId,

@@ -18,7 +18,8 @@ import 'package:games_services/games_services.dart';
 class LeaderboardService {
   static const _androidLeaderboardId = 'CgkIst2gm-UKEAIQAA';
 
-  static bool get _isSupported => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  static bool get _isSupported =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   /// Silent sign-in, best attempted once at app/game startup. Play Games
   /// Services v2 also auto-prompts sign-in on its own, but the plugin docs
@@ -46,13 +47,16 @@ class LeaderboardService {
   }
 
   /// Opens Play Games' own leaderboard UI. Returns whether it could — the
-  /// caller can use this to show a "chưa khả dụng" message instead of
+  /// caller can use this to show a "not available" message instead of
   /// silently doing nothing when the user explicitly tapped a button for it.
   static Future<bool> showLeaderboard() async {
-    if (!_isSupported || _androidLeaderboardId.startsWith('REPLACE_')) return false;
+    if (!_isSupported || _androidLeaderboardId.startsWith('REPLACE_'))
+      return false;
     try {
       await GameAuth.signIn();
-      await Leaderboards.showLeaderboards(androidLeaderboardID: _androidLeaderboardId);
+      await Leaderboards.showLeaderboards(
+        androidLeaderboardID: _androidLeaderboardId,
+      );
       return true;
     } catch (_) {
       return false;

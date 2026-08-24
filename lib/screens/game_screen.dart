@@ -487,7 +487,7 @@ class _PauseOverlay extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             const Text(
-              'TẠM DỪNG',
+              'PAUSED',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 28,
@@ -498,7 +498,7 @@ class _PauseOverlay extends StatelessWidget {
             SizedBox(
               width: 200,
               child: PillButton(
-                label: 'TIẾP TỤC',
+                label: 'RESUME',
                 color: Colors.green,
                 icon: Icons.play_arrow,
                 onPressed: onResume,
@@ -508,7 +508,7 @@ class _PauseOverlay extends StatelessWidget {
             SizedBox(
               width: 200,
               child: PillButton(
-                label: 'CHƠI LẠI',
+                label: 'RESTART',
                 color: Colors.orange,
                 icon: Icons.refresh,
                 onPressed: onRestart,
@@ -518,7 +518,7 @@ class _PauseOverlay extends StatelessWidget {
             SizedBox(
               width: 200,
               child: PillButton(
-                label: 'VỀ MENU',
+                label: 'MENU',
                 color: Colors.blueGrey,
                 icon: Icons.home,
                 onPressed: onExit,
@@ -568,23 +568,23 @@ class _GameOverOverlay extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                won ? 'HOÀN THÀNH!' : 'HẾT GIỜ!',
+                won ? 'COMPLETE!' : "TIME'S UP!",
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
                 ),
               ),
               const SizedBox(height: 8),
-              Text('Điểm: $score', style: const TextStyle(fontSize: 18)),
+              Text('Score: $score', style: const TextStyle(fontSize: 18)),
               Text(
-                'Điểm cao nhất: $highScore',
+                'High Score: $highScore',
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 20),
               SizedBox(
                 width: 200,
                 child: PillButton(
-                  label: 'CHƠI LẠI',
+                  label: 'RESTART',
                   color: Colors.green,
                   icon: Icons.refresh,
                   onPressed: onRestart,
@@ -594,7 +594,7 @@ class _GameOverOverlay extends StatelessWidget {
               SizedBox(
                 width: 200,
                 child: PillButton(
-                  label: 'VỀ MENU',
+                  label: 'MENU',
                   color: Colors.blueGrey,
                   icon: Icons.home,
                   onPressed: onExit,

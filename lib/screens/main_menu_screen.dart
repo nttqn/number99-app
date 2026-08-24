@@ -28,9 +28,9 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _play() async {
-    await Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const GameScreen()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const GameScreen()));
     _loadHighScore();
   }
 
@@ -38,7 +38,11 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     final opened = await LeaderboardService.showLeaderboard();
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bảng xếp hạng chưa khả dụng — cần đăng nhập tài khoản Google.')),
+        const SnackBar(
+          content: Text(
+            'Leaderboard not available — sign in with a Google account.',
+          ),
+        ),
       );
     }
   }
@@ -67,28 +71,43 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Tìm đúng số theo yêu cầu\ntrước khi hết giờ!',
+                  'Find the right number\nbefore time runs out!',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 15, color: Colors.green.shade900),
                 ),
                 const SizedBox(height: 28),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 10,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.1), blurRadius: 6, offset: const Offset(0, 3)),
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
                     ],
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.emoji_events, color: Colors.amber, size: 22),
+                      const Icon(
+                        Icons.emoji_events,
+                        color: Colors.amber,
+                        size: 22,
+                      ),
                       const SizedBox(width: 8),
                       Text(
-                        'Điểm cao: $_highScore',
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1B5E20)),
+                        'High Score: $_highScore',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1B5E20),
+                        ),
                       ),
                     ],
                   ),
@@ -97,7 +116,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 SizedBox(
                   width: 220,
                   child: PillButton(
-                    label: 'CHƠI NGAY',
+                    label: 'PLAY',
                     color: Colors.green.shade600,
                     icon: Icons.play_arrow,
                     onPressed: _play,
@@ -107,7 +126,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
                 SizedBox(
                   width: 220,
                   child: PillButton(
-                    label: 'BẢNG XẾP HẠNG',
+                    label: 'LEADERBOARD',
                     color: Colors.blueGrey.shade600,
                     icon: Icons.leaderboard,
                     onPressed: _openLeaderboard,
@@ -133,7 +152,11 @@ class _NumberBadge extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: const Color(0xFF2E7D32), width: 6),
         boxShadow: [
-          BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 8, offset: const Offset(0, 4)),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
       alignment: Alignment.center,

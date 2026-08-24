@@ -4,7 +4,7 @@ Guidance for working in this repo. Same CI/Android/signing pattern as the siblin
 
 ## What this is
 
-"99 Numbers" — a Flutter number-finding reflex game, rebuilt from the published `com.nttqn.number99` Play Store app (no original source was available). A 9x11 grid holds the numbers 1–99 in random order; the HUD shows a target number and a 10-second countdown; tapping the matching cell scores points (more for a faster catch) and advances to the next target. The round — and the game — ends when the countdown hits zero; the game is won when all 99 numbers have been found. Vietnamese-language UI, matching the original screenshot's HUD labels (TIME/SCORE) and button layout (RESTART/HINT/PAUSE).
+"99 Numbers" — a Flutter number-finding reflex game, rebuilt from the published `com.nttqn.number99` Play Store app (no original source was available). A 9x11 grid holds the numbers 1–99 in random order; the HUD shows a target number and a 10-second countdown; tapping the matching cell scores points (more for a faster catch) and advances to the next target. The round — and the game — ends when the countdown hits zero; the game is won when all 99 numbers have been found. All-English UI (switched from an initial Vietnamese menu/dialogs on 2026-08-24 for consistency with the HUD, which was always English to match the original screenshot's TIME/SCORE labels and RESTART/HINT/PAUSE button layout).
 
 No native `android/` or `web/` directory is committed — see "Android project is generated, not committed" below.
 

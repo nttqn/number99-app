@@ -8,6 +8,6 @@ void main() {
     await tester.pump();
 
     expect(find.text('99 NUMBERS'), findsOneWidget);
-    expect(find.text('CHƠI NGAY'), findsOneWidget);
+    expect(find.text('PLAY'), findsOneWidget);
   });
 }

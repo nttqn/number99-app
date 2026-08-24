@@ -17,10 +17,7 @@ class Number99App extends StatelessWidget {
     return MaterialApp(
       title: '99 Numbers',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorSchemeSeed: Colors.green,
-      ),
+      theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.green),
       home: const MainMenuScreen(),
     );
   }

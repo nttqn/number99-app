@@ -39,7 +39,10 @@ class PillButton extends StatelessWidget {
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
                 border: Border(
-                  bottom: BorderSide(color: Colors.black.withValues(alpha: 0.25), width: 3),
+                  bottom: BorderSide(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    width: 3,
+                  ),
                 ),
               ),
               // FittedBox guarantees the icon+label never overflows the
@@ -80,11 +83,18 @@ class PillButton extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.all(4),
               constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
-              decoration: const BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle),
+              decoration: const BoxDecoration(
+                color: Colors.redAccent,
+                shape: BoxShape.circle,
+              ),
               alignment: Alignment.center,
               child: Text(
                 '$badge',
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),
