@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/leaderboard_service.dart';
 import '../services/save_service.dart';
+import '../services/sound_service.dart';
 import '../widgets/pill_button.dart';
 import 'game_screen.dart';
 
@@ -28,6 +29,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _play() async {
+    SoundService.playMenuConfirm();
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => const GameScreen()));
@@ -35,6 +37,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   }
 
   Future<void> _openLeaderboard() async {
+    SoundService.playMenuConfirm();
     final opened = await LeaderboardService.showLeaderboard();
     if (!opened && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

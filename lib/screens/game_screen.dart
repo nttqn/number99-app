@@ -7,6 +7,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/admob_service.dart';
 import '../services/leaderboard_service.dart';
 import '../services/save_service.dart';
+import '../services/sound_service.dart';
 import '../widgets/pill_button.dart';
 
 const int _gridCols = 9;
@@ -106,6 +107,7 @@ class _GameScreenState extends State<GameScreen> {
     if (_paused || _roundLocked || _gameOver) return;
     final value = _board[index];
     if (_found.contains(value)) return;
+    SoundService.playSelect();
 
     if (value == _target) {
       _timer?.cancel();
@@ -134,6 +136,7 @@ class _GameScreenState extends State<GameScreen> {
 
   void _useHint() {
     if (_hintsLeft <= 0 || _paused || _roundLocked || _gameOver) return;
+    SoundService.playHint();
     final idx = _board.indexOf(_target);
     setState(() {
       _hintsLeft -= 1;
@@ -154,6 +157,7 @@ class _GameScreenState extends State<GameScreen> {
 
   Future<void> _endGame({required bool won}) async {
     _timer?.cancel();
+    SoundService.playFail();
     final isNewHigh = await SaveService.submitScore(_score);
     if (!mounted) return;
     setState(() {
@@ -176,6 +180,7 @@ class _GameScreenState extends State<GameScreen> {
       canPop: _gameOver,
       onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
+        SoundService.playMenuBack();
         _togglePause();
       },
       child: Scaffold(
@@ -198,17 +203,32 @@ class _GameScreenState extends State<GameScreen> {
               ),
               if (_paused && !_gameOver)
                 _PauseOverlay(
-                  onResume: _togglePause,
-                  onRestart: _newGame,
-                  onExit: () => Navigator.of(context).pop(),
+                  onResume: () {
+                    SoundService.playMenuBack();
+                    _togglePause();
+                  },
+                  onRestart: () {
+                    SoundService.playMenuConfirm();
+                    _newGame();
+                  },
+                  onExit: () {
+                    SoundService.playMenuConfirm();
+                    Navigator.of(context).pop();
+                  },
                 ),
               if (_gameOver)
                 _GameOverOverlay(
                   won: _won,
                   score: _score,
                   highScore: _highScore,
-                  onRestart: _newGame,
-                  onExit: () => Navigator.of(context).pop(),
+                  onRestart: () {
+                    SoundService.playMenuConfirm();
+                    _newGame();
+                  },
+                  onExit: () {
+                    SoundService.playMenuConfirm();
+                    Navigator.of(context).pop();
+                  },
                 ),
             ],
           ),
@@ -275,7 +295,10 @@ class _GameScreenState extends State<GameScreen> {
               label: 'RESTART',
               color: const Color(0xFF4CAF50),
               icon: Icons.refresh,
-              onPressed: _newGame,
+              onPressed: () {
+                SoundService.playMenuConfirm();
+                _newGame();
+              },
             ),
           ),
           const SizedBox(width: 10),
@@ -294,7 +317,14 @@ class _GameScreenState extends State<GameScreen> {
               label: _paused ? 'RESUME' : 'PAUSE',
               color: const Color(0xFF43A047),
               icon: _paused ? Icons.play_arrow : Icons.pause,
-              onPressed: _togglePause,
+              onPressed: () {
+                if (_paused) {
+                  SoundService.playMenuBack();
+                } else {
+                  SoundService.playMenuConfirm();
+                }
+                _togglePause();
+              },
             ),
           ),
         ],
