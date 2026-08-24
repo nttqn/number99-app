@@ -50,8 +50,9 @@ class LeaderboardService {
   /// caller can use this to show a "not available" message instead of
   /// silently doing nothing when the user explicitly tapped a button for it.
   static Future<bool> showLeaderboard() async {
-    if (!_isSupported || _androidLeaderboardId.startsWith('REPLACE_'))
+    if (!_isSupported || _androidLeaderboardId.startsWith('REPLACE_')) {
       return false;
+    }
     try {
       await GameAuth.signIn();
       await Leaderboards.showLeaderboards(
