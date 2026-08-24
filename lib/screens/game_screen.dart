@@ -67,6 +67,7 @@ class _GameScreenState extends State<GameScreen> {
     _found.clear();
     _score = 0;
     _hintsLeft = _maxHints;
+    _paused = false;
     _gameOver = false;
     _won = false;
     _hintIndex = null;
