@@ -524,7 +524,23 @@ class _PauseOverlay extends StatelessWidget {
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 16),
+            ValueListenableBuilder<bool>(
+              valueListenable: SoundService.enabledNotifier,
+              builder: (context, enabled, _) => Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    enabled ? Icons.volume_up : Icons.volume_off,
+                    color: Colors.white70,
+                  ),
+                  const SizedBox(width: 8),
+                  const Text('Sound', style: TextStyle(color: Colors.white70)),
+                  Switch(value: enabled, onChanged: SoundService.setEnabled),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             SizedBox(
               width: 200,
               child: PillButton(

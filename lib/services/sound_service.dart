@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flame_audio/flame_audio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Sound effects for the game's UI/gameplay taps.
 ///
@@ -17,9 +19,17 @@ class SoundService {
   static const _select = 'sfx_select.wav';
   static const _fail = 'sfx_fail.wav';
 
+  static const _enabledPrefKey = 'sound_enabled';
+
+  /// Whether sound effects should play, persisted across launches. A
+  /// [ValueNotifier] so the pause overlay's toggle can reflect it live.
+  static final ValueNotifier<bool> enabledNotifier = ValueNotifier<bool>(true);
+  static bool get enabled => enabledNotifier.value;
+
   static final Map<String, AudioPool> _pools = {};
 
   static Future<void> preload() async {
+    await _loadEnabledState();
     try {
       await FlameAudio.audioCache.loadAll([
         _menuConfirm,
@@ -41,6 +51,25 @@ class SoundService {
     }
   }
 
+  static Future<void> _loadEnabledState() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      enabledNotifier.value = prefs.getBool(_enabledPrefKey) ?? true;
+    } catch (_) {
+      // Fall back to the default (enabled) if prefs aren't available.
+    }
+  }
+
+  static Future<void> setEnabled(bool value) async {
+    enabledNotifier.value = value;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_enabledPrefKey, value);
+    } catch (_) {
+      // Not persisting the choice isn't worth failing over.
+    }
+  }
+
   /// Menu/pause/game-over buttons that move forward: PLAY, LEADERBOARD,
   /// PAUSE, RESTART, MENU.
   static void playMenuConfirm() => _play(_menuConfirm);
@@ -58,6 +87,7 @@ class SoundService {
   static void playFail() => _play(_fail);
 
   static void _play(String file) {
+    if (!enabled) return;
     // Fire-and-forget: a sound failing to play should never interrupt
     // gameplay or navigation.
     unawaited(_playSafely(file));
