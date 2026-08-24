@@ -108,7 +108,9 @@ class _GameScreenState extends State<GameScreen> {
 
     if (value == _target) {
       _timer?.cancel();
-      final gained = _hintUsedThisRound ? 0 : (10 + (_timeLeft / _roundSeconds * 90)).round();
+      final gained = _hintUsedThisRound
+          ? 0
+          : (10 + (_timeLeft / _roundSeconds * 90)).round();
       setState(() {
         _score += gained;
         _found.add(value);
@@ -164,34 +166,47 @@ class _GameScreenState extends State<GameScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFAEE7F0),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                if (_bannerAd != null)
-                  SizedBox(
-                    width: _bannerAd!.size.width.toDouble(),
-                    height: _bannerAd!.size.height.toDouble(),
-                    child: AdWidget(ad: _bannerAd!),
-                  ),
-                _HudBar(timeLeft: _timeLeft, target: _target, score: _score),
-                Expanded(child: _buildGrid()),
-                _buildBottomBar(),
-              ],
-            ),
-            if (_paused && !_gameOver) _PauseOverlay(onResume: _togglePause, onRestart: _newGame),
-            if (_gameOver)
-              _GameOverOverlay(
-                won: _won,
-                score: _score,
-                highScore: _highScore,
-                onRestart: _newGame,
-                onExit: () => Navigator.of(context).pop(),
+    return PopScope(
+      // The back button must never exit mid-round: that would either quit
+      // straight past a running countdown or (worse) let a player back out
+      // to peek-then-return, same cheat risk as the pause screen's board
+      // visibility. Back always toggles pause instead of popping, and only
+      // pops for real once the game has actually ended.
+      canPop: _gameOver,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _togglePause();
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFAEE7F0),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Column(
+                children: [
+                  if (_bannerAd != null)
+                    SizedBox(
+                      width: _bannerAd!.size.width.toDouble(),
+                      height: _bannerAd!.size.height.toDouble(),
+                      child: AdWidget(ad: _bannerAd!),
+                    ),
+                  _HudBar(timeLeft: _timeLeft, target: _target, score: _score),
+                  Expanded(child: _buildGrid()),
+                  _buildBottomBar(),
+                ],
               ),
-          ],
+              if (_paused && !_gameOver)
+                _PauseOverlay(onResume: _togglePause, onRestart: _newGame),
+              if (_gameOver)
+                _GameOverOverlay(
+                  won: _won,
+                  score: _score,
+                  highScore: _highScore,
+                  onRestart: _newGame,
+                  onExit: () => Navigator.of(context).pop(),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -209,8 +224,10 @@ class _GameScreenState extends State<GameScreen> {
           // screen where the HUD/ad-banner/bottom-bar leave less height
           // than that produces, the last row(s) render past the bottom of
           // this box and get clipped behind the button bar.
-          final cellWidth = (constraints.maxWidth - spacing * (_gridCols - 1)) / _gridCols;
-          final cellHeight = (constraints.maxHeight - spacing * (_gridRows - 1)) / _gridRows;
+          final cellWidth =
+              (constraints.maxWidth - spacing * (_gridCols - 1)) / _gridCols;
+          final cellHeight =
+              (constraints.maxHeight - spacing * (_gridRows - 1)) / _gridRows;
           return GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _totalNumbers,
@@ -282,7 +299,11 @@ class _GameScreenState extends State<GameScreen> {
 }
 
 class _HudBar extends StatelessWidget {
-  const _HudBar({required this.timeLeft, required this.target, required this.score});
+  const _HudBar({
+    required this.timeLeft,
+    required this.target,
+    required this.score,
+  });
 
   final double timeLeft;
   final int target;
@@ -300,7 +321,14 @@ class _HudBar extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                const Text('TIME', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
+                const Text(
+                  'TIME',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
                 Text(
                   timeLeft.ceil().toString(),
                   style: TextStyle(
@@ -320,22 +348,41 @@ class _HudBar extends StatelessWidget {
               borderRadius: BorderRadius.circular(14),
               border: Border.all(color: const Color(0xFF33691E), width: 4),
               boxShadow: [
-                BoxShadow(color: Colors.black.withValues(alpha: 0.2), blurRadius: 6, offset: const Offset(0, 3)),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
               ],
             ),
             alignment: Alignment.center,
             child: Text(
               '$target',
-              style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 30, color: Color(0xFFD81B60)),
+              style: const TextStyle(
+                fontWeight: FontWeight.w900,
+                fontSize: 30,
+                color: Color(0xFFD81B60),
+              ),
             ),
           ),
           Expanded(
             child: Column(
               children: [
-                const Text('SCORE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: Colors.white)),
+                const Text(
+                  'SCORE',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
                 Text(
                   '$score',
-                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 26, color: Color(0xFF1B5E20)),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 26,
+                    color: Color(0xFF1B5E20),
+                  ),
                 ),
               ],
             ),
@@ -423,18 +470,39 @@ class _PauseOverlay extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.pause_circle_filled, color: Colors.white, size: 64),
+            const Icon(
+              Icons.pause_circle_filled,
+              color: Colors.white,
+              size: 64,
+            ),
             const SizedBox(height: 12),
-            const Text('TẠM DỪNG', style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.w900)),
+            const Text(
+              'TẠM DỪNG',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               width: 200,
-              child: PillButton(label: 'TIẾP TỤC', color: Colors.green, icon: Icons.play_arrow, onPressed: onResume),
+              child: PillButton(
+                label: 'TIẾP TỤC',
+                color: Colors.green,
+                icon: Icons.play_arrow,
+                onPressed: onResume,
+              ),
             ),
             const SizedBox(height: 12),
             SizedBox(
               width: 200,
-              child: PillButton(label: 'CHƠI LẠI', color: Colors.orange, icon: Icons.refresh, onPressed: onRestart),
+              child: PillButton(
+                label: 'CHƠI LẠI',
+                color: Colors.orange,
+                icon: Icons.refresh,
+                onPressed: onRestart,
+              ),
             ),
           ],
         ),
@@ -466,7 +534,10 @@ class _GameOverOverlay extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 32),
           padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20)),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20),
+          ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -478,20 +549,36 @@ class _GameOverOverlay extends StatelessWidget {
               const SizedBox(height: 12),
               Text(
                 won ? 'HOÀN THÀNH!' : 'HẾT GIỜ!',
-                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 8),
               Text('Điểm: $score', style: const TextStyle(fontSize: 18)),
-              Text('Điểm cao nhất: $highScore', style: TextStyle(fontSize: 14, color: Colors.grey.shade600)),
+              Text(
+                'Điểm cao nhất: $highScore',
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
               const SizedBox(height: 20),
               SizedBox(
                 width: 200,
-                child: PillButton(label: 'CHƠI LẠI', color: Colors.green, icon: Icons.refresh, onPressed: onRestart),
+                child: PillButton(
+                  label: 'CHƠI LẠI',
+                  color: Colors.green,
+                  icon: Icons.refresh,
+                  onPressed: onRestart,
+                ),
               ),
               const SizedBox(height: 10),
               SizedBox(
                 width: 200,
-                child: PillButton(label: 'VỀ MENU', color: Colors.blueGrey, icon: Icons.home, onPressed: onExit),
+                child: PillButton(
+                  label: 'VỀ MENU',
+                  color: Colors.blueGrey,
+                  icon: Icons.home,
+                  onPressed: onExit,
+                ),
               ),
             ],
           ),
