@@ -15,13 +15,13 @@ const int _gridCols = 9;
 const int _gridRows = 11;
 const int _totalNumbers = _gridCols * _gridRows; // 99
 
-// One level per grid row's worth of numbers found (9), so a 99-number board
-// runs exactly 11 levels. Round countdown shrinks a second per level down to
-// a floor of 5s; score-per-catch and the hint penalty both scale up with
+// A level only advances once the whole 99-number board has been cleared —
+// clearing it doesn't end the game, it reshuffles a fresh board and keeps
+// going at the next level (endless — the run only actually ends by timing
+// out, see _tick). Round countdown shrinks a second per level down to a
+// floor of 5s; score-per-catch and the hint penalty both scale up with
 // level, and the hint budget shrinks — all deliberately, to keep the game
-// getting harder rather than just faster.
-const int _numbersPerLevel = 9;
-const int _maxLevel = _totalNumbers ~/ _numbersPerLevel; // 11
+// getting harder rather than just faster, and with no upper cap on level.
 const double _baseRoundSeconds = 15.0;
 const double _minRoundSeconds = 5.0;
 const int _baseMaxHints = 3;
@@ -56,7 +56,6 @@ class _GameScreenState extends State<GameScreen> {
   bool _roundLocked = false;
   bool _hintUsedThisRound = false;
   bool _gameOver = false;
-  bool _won = false;
   int? _hintIndex;
   int? _wrongFlashIndex;
   int? _correctFlashIndex;
@@ -92,26 +91,24 @@ class _GameScreenState extends State<GameScreen> {
     _hintsLeft = _maxHintsForLevel(1);
     _paused = false;
     _gameOver = false;
-    _won = false;
     _hintIndex = null;
     _announcementLevel = 1;
     _startRound();
   }
 
   void _startRound() {
-    final remaining = _board.where((n) => !_found.contains(n)).toList();
-    if (remaining.isEmpty) {
-      _endGame(won: true);
-      return;
-    }
-    final newLevel = min(_maxLevel, (_found.length ~/ _numbersPerLevel) + 1);
-    if (newLevel > _level) {
-      _level = newLevel;
+    if (_found.length >= _totalNumbers) {
+      // Board cleared — this doesn't end the game, it advances the level
+      // and deals a fresh, fully-reshuffled board so a player can't just
+      // memorize positions over a long session.
+      _level++;
+      _board = List.generate(_totalNumbers, (i) => i + 1)..shuffle();
+      _found.clear();
       _hintsLeft = min(_hintsLeft, _maxHintsForLevel(_level));
-      _reshuffleRemaining();
       _announcementLevel = _level;
     }
-    remaining.shuffle();
+    final remaining = _board.where((n) => !_found.contains(n)).toList()
+      ..shuffle();
     _target = remaining.first;
     _timeLeft = _roundSecondsForLevel(_level);
     _roundLocked = false;
@@ -122,32 +119,13 @@ class _GameScreenState extends State<GameScreen> {
     if (mounted) setState(() {});
   }
 
-  /// Reshuffles which cell holds which *unfound* number, leaving already-found
-  /// cells untouched. Run on every level-up so a player can't just memorize
-  /// board positions over a long game — the challenge stays about scanning,
-  /// not recall.
-  void _reshuffleRemaining() {
-    final indices = <int>[];
-    final values = <int>[];
-    for (var i = 0; i < _board.length; i++) {
-      if (!_found.contains(_board[i])) {
-        indices.add(i);
-        values.add(_board[i]);
-      }
-    }
-    values.shuffle();
-    for (var i = 0; i < indices.length; i++) {
-      _board[indices[i]] = values[i];
-    }
-  }
-
   void _tick(Timer t) {
     if (_paused) return;
     setState(() {
       _timeLeft = max(0, _timeLeft - 0.1);
       if (_timeLeft <= 0) {
         t.cancel();
-        _endGame(won: false);
+        _endGame();
       }
     });
   }
@@ -206,14 +184,13 @@ class _GameScreenState extends State<GameScreen> {
     setState(() => _paused = !_paused);
   }
 
-  Future<void> _endGame({required bool won}) async {
+  Future<void> _endGame() async {
     _timer?.cancel();
     SoundService.playFail();
     final isNewHigh = await SaveService.submitScore(_score);
     if (!mounted) return;
     setState(() {
       _gameOver = true;
-      _won = won;
       if (isNewHigh) _highScore = _score;
     });
     LeaderboardService.submitScore(_score);
@@ -282,8 +259,8 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               if (_gameOver)
                 _GameOverOverlay(
-                  won: _won,
                   score: _score,
+                  level: _level,
                   highScore: _highScore,
                   onRestart: () {
                     SoundService.playMenuConfirm();
@@ -659,15 +636,15 @@ class _PauseOverlay extends StatelessWidget {
 
 class _GameOverOverlay extends StatelessWidget {
   const _GameOverOverlay({
-    required this.won,
     required this.score,
+    required this.level,
     required this.highScore,
     required this.onRestart,
     required this.onExit,
   });
 
-  final bool won;
   final int score;
+  final int level;
   final int highScore;
   final VoidCallback onRestart;
   final VoidCallback onExit;
@@ -687,20 +664,17 @@ class _GameOverOverlay extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
-                won ? Icons.emoji_events : Icons.timer_off,
-                color: won ? Colors.amber : Colors.redAccent,
-                size: 56,
-              ),
+              const Icon(Icons.timer_off, color: Colors.redAccent, size: 56),
               const SizedBox(height: 12),
-              Text(
-                won ? 'COMPLETE!' : "TIME'S UP!",
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900,
-                ),
+              const Text(
+                "TIME'S UP!",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
+              Text(
+                'Level reached: $level',
+                style: const TextStyle(fontSize: 16),
+              ),
               Text('Score: $score', style: const TextStyle(fontSize: 18)),
               Text(
                 'High Score: $highScore',
