@@ -16,16 +16,20 @@ const int _gridRows = 11;
 const int _totalNumbers = _gridCols * _gridRows; // 99
 
 // A level only advances once the whole 99-number board has been cleared —
-// clearing it doesn't end the game, it reshuffles a fresh board and keeps
-// going at the next level (endless — the run only actually ends by timing
-// out, see _tick). Round countdown shrinks a second per level down to a
-// floor of 5s; score-per-catch and the hint penalty both scale up with
-// level, and the hint budget shrinks — all deliberately, to keep the game
-// getting harder rather than just faster, and with no upper cap on level.
+// clearing it reshuffles a fresh board and continues at the next level,
+// *except* on the final level (11, where the round countdown bottoms out
+// at its 5s floor — see _roundSecondsForLevel), which is a real win instead.
+// Round countdown shrinks a second per level; score-per-catch and the hint
+// penalty both scale up with level; the hint budget shrinks — all
+// deliberately, to keep the game getting harder rather than just faster.
 const double _baseRoundSeconds = 15.0;
 const double _minRoundSeconds = 5.0;
 const int _baseMaxHints = 3;
 const int _baseHintPenalty = 10;
+
+// Level at which _roundSecondsForLevel first hits _minRoundSeconds:
+// 15 - (11-1) = 5. Clearing this level's board is the win condition.
+const int _maxLevel = 11;
 
 double _roundSecondsForLevel(int level) =>
     max(_minRoundSeconds, _baseRoundSeconds - (level - 1));
@@ -56,6 +60,7 @@ class _GameScreenState extends State<GameScreen> {
   bool _roundLocked = false;
   bool _hintUsedThisRound = false;
   bool _gameOver = false;
+  bool _won = false;
   int? _hintIndex;
   int? _wrongFlashIndex;
   int? _correctFlashIndex;
@@ -91,6 +96,7 @@ class _GameScreenState extends State<GameScreen> {
     _hintsLeft = _maxHintsForLevel(1);
     _paused = false;
     _gameOver = false;
+    _won = false;
     _hintIndex = null;
     _announcementLevel = 1;
     _startRound();
@@ -98,9 +104,13 @@ class _GameScreenState extends State<GameScreen> {
 
   void _startRound() {
     if (_found.length >= _totalNumbers) {
-      // Board cleared — this doesn't end the game, it advances the level
-      // and deals a fresh, fully-reshuffled board so a player can't just
-      // memorize positions over a long session.
+      // Board cleared. On the final level that's a win; otherwise it
+      // advances the level and deals a fresh, fully-reshuffled board so a
+      // player can't just memorize positions over a long session.
+      if (_level >= _maxLevel) {
+        _endGame(won: true);
+        return;
+      }
       _level++;
       _board = List.generate(_totalNumbers, (i) => i + 1)..shuffle();
       _found.clear();
@@ -125,7 +135,7 @@ class _GameScreenState extends State<GameScreen> {
       _timeLeft = max(0, _timeLeft - 0.1);
       if (_timeLeft <= 0) {
         t.cancel();
-        _endGame();
+        _endGame(won: false);
       }
     });
   }
@@ -184,13 +194,18 @@ class _GameScreenState extends State<GameScreen> {
     setState(() => _paused = !_paused);
   }
 
-  Future<void> _endGame() async {
+  Future<void> _endGame({required bool won}) async {
     _timer?.cancel();
-    SoundService.playFail();
+    if (won) {
+      SoundService.playMenuConfirm();
+    } else {
+      SoundService.playFail();
+    }
     final isNewHigh = await SaveService.submitScore(_score);
     if (!mounted) return;
     setState(() {
       _gameOver = true;
+      _won = won;
       if (isNewHigh) _highScore = _score;
     });
     LeaderboardService.submitScore(_score);
@@ -259,6 +274,7 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               if (_gameOver)
                 _GameOverOverlay(
+                  won: _won,
                   score: _score,
                   level: _level,
                   highScore: _highScore,
@@ -636,6 +652,7 @@ class _PauseOverlay extends StatelessWidget {
 
 class _GameOverOverlay extends StatelessWidget {
   const _GameOverOverlay({
+    required this.won,
     required this.score,
     required this.level,
     required this.highScore,
@@ -643,6 +660,7 @@ class _GameOverOverlay extends StatelessWidget {
     required this.onExit,
   });
 
+  final bool won;
   final int score;
   final int level;
   final int highScore;
@@ -664,11 +682,18 @@ class _GameOverOverlay extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.timer_off, color: Colors.redAccent, size: 56),
+              Icon(
+                won ? Icons.emoji_events : Icons.timer_off,
+                color: won ? Colors.amber : Colors.redAccent,
+                size: 56,
+              ),
               const SizedBox(height: 12),
-              const Text(
-                "TIME'S UP!",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900),
+              Text(
+                won ? 'YOU WIN!' : "TIME'S UP!",
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
               const SizedBox(height: 8),
               Text(
