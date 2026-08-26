@@ -4,7 +4,7 @@ Guidance for working in this repo. Same CI/Android/signing pattern as the siblin
 
 ## What this is
 
-"99 Numbers" — a Flutter number-finding reflex game, rebuilt from the published `com.nttqn.number99` Play Store app (no original source was available). A 9x11 grid holds the numbers 1–99 in random order; the HUD shows a target number and a 10-second countdown; tapping the matching cell scores points (more for a faster catch) and advances to the next target. The round — and the game — ends when the countdown hits zero; the game is won when all 99 numbers have been found. All-English UI (switched from an initial Vietnamese menu/dialogs on 2026-08-24 for consistency with the HUD, which was always English to match the original screenshot's TIME/SCORE labels and RESTART/HINT/PAUSE button layout).
+"99 Numbers" — a Flutter number-finding reflex game, rebuilt from the published `com.nttqn.number99` Play Store app (no original source was available). A 9x11 grid holds the numbers 1–99 in random order; the HUD shows a target number and a countdown (shrinks as level rises — see Levels below); tapping the matching cell scores points (more for a faster catch) and advances to the next target. The round — and the game — ends when the countdown hits zero; the game is won when all 99 numbers have been found. All-English UI (switched from an initial Vietnamese menu/dialogs on 2026-08-24 for consistency with the HUD, which was always English to match the original screenshot's TIME/SCORE labels and RESTART/HINT/PAUSE button layout).
 
 No native `android/` or `web/` directory is committed — see "Android project is generated, not committed" below.
 
@@ -24,12 +24,27 @@ Real APK/AAB builds happen in CI only: push to `main` (or trigger `workflow_disp
 
 Single `StatefulWidget` holds all game state — no separate state-management package, the game is simple enough that it isn't warranted. Key mechanics:
 
-- **Board**: `List<int>` of 1–99, shuffled once per game (`_newGame`). Cell *index* in the grid is fixed for the game; the *value* at each index is what's shuffled.
-- **Round**: `_startRound` picks a random remaining (not-yet-found) number as `_target`, resets a 10.0s countdown driven by a 100ms `Timer.periodic`. Timing out calls `_endGame(won: false)`; finding the last number calls `_endGame(won: true)`.
-- **Scoring**: `10 + (timeLeft / roundSeconds * 90)`, rounded — an instant catch scores ~100, a last-moment catch scores ~10. This is a judgment call (the original app's exact formula is unknown); adjust the constants in `game_screen.dart` if the user wants a different curve.
-- **Wrong taps**: no penalty, just a brief red flash (`_wrongFlashIndex`) — this was a design choice made without a confirmed spec from the user, since the original didn't specify one. Revisit if they ask for a penalty (e.g. losing time).
-- **Hints**: limited to 3 per game (`_maxHints`), highlights the target cell yellow for ~1s. Also a design choice not confirmed against the original — the original might have unlimited hints; ask before assuming this is final.
+- **Board**: `List<int>` of 1–99, shuffled once per game (`_newGame`). Cell *index* in the grid is fixed for the game; the *value* at each index is what's shuffled (except see Levels — reshuffled again on every level-up).
+- **Round**: `_startRound` picks a random remaining (not-yet-found) number as `_target`, resets a countdown (`_roundSecondsForLevel(_level)`) driven by a 100ms `Timer.periodic`. Timing out calls `_endGame(won: false)`; finding the last number calls `_endGame(won: true)`.
+- **Scoring**: `(10 + (timeLeft / roundSeconds * 90)) * levelMultiplier`, rounded — an instant catch scores ~100 at level 1, scaling up with `_scoreMultiplierForLevel`. This curve (and the wrong-tap/hint behavior below) is a judgment call, not confirmed against the original app's exact numbers — adjust the constants in `game_screen.dart` if the user wants different tuning.
+- **Wrong taps**: no penalty, just a brief red flash (`_wrongFlashIndex`).
+- **Hints**: budget shrinks by level (`_maxHintsForLevel`) and each use's penalty grows by level (`_hintPenaltyForLevel`) — see Levels.
 - **High score**: single key in `shared_preferences` (`SaveService`), since there's only one game mode.
+
+## Levels (`_level`, `game_screen.dart`)
+
+Added 2026-08-24 per explicit spec, plus three difficulty-scaling mechanics the user picked from a set of suggestions. One level per 9 numbers found (`_numbersPerLevel`, matching a grid row) — a full 99-number board runs exactly 11 levels (`_maxLevel`). All four `_xxxForLevel(level)` functions at the top of `game_screen.dart` are pure and derived from `_level`, no separate per-level config table:
+- **Round countdown**: `_roundSecondsForLevel` — starts at 15s (`_baseRoundSeconds`), −1s per level, floors at 5s (`_minRoundSeconds`, reached exactly at level 11).
+- **Score multiplier**: `_scoreMultiplierForLevel` — `1 + (level-1)*0.2`, so level 11 catches are worth up to 3x a level 1 catch.
+- **Hint budget**: `_maxHintsForLevel` — steps down 3→2→1→0 every 3 levels (levels 1-3: 3 hints, 4-6: 2, 7-9: 1, 10-11: 0). `_hintsLeft` is clamped (`min`, never increased) against the new cap on every level-up, so leveling up can only take hints away, never refill them.
+- **Hint penalty**: `_hintPenaltyForLevel` — `10 + (level-1)*5`, so using a hint at level 11 costs 60 points instead of 10.
+- **Board reshuffle**: `_reshuffleRemaining()` runs on every level-up — shuffles which cell holds which *still-unfound* number (found cells keep their position/checkmark). Deliberately breaks any spatial memorization the player has built up over a long session; this was the user's top pick among the difficulty-scaling options offered.
+
+Level is derived, not tracked as an independent counter: `_startRound` recomputes it every round from `_found.length ~/ _numbersPerLevel`, and only acts (bumps `_level`, clamps hints, reshuffles, fires the announcement) when it's strictly greater than the current value — so it can never regress and there's no separate "did we already handle this transition" flag to keep in sync.
+
+**`LevelAnnouncement`** (`lib/widgets/level_announcement.dart`) is the "LEVEL N" zoom-in/hold/zoom-out banner shown on every level start (including level 1, at game start) — a plain-Flutter `AnimationController` + `TweenSequence<double>` port of dino-egg-shooter's `AnnouncementText` Flame component (same 0.3s ease-out to 1.15x → 0.2s ease-in to 1.0x → 1.0s hold → 0.5s ease-in to 0x, 2.0s total), since this app has no Flame game loop to hang a Flame component off of. It's `IgnorePointer`-wrapped and non-blocking — the round timer keeps running underneath it, matching the source behavior.
+
+**Testing note**: verifying a level-up via the web-server/Playwright path needs ~20-30 brute-force taps across the whole grid per successful catch (tap-lock during the 350ms correct-catch delay means a full 99-cell sweep only reliably lands one catch, not several) — expect to need on the order of 20+ full-grid sweeps to reliably cross the first 9-find threshold. Confirmed working end-to-end this way (HUD showed "LV 2", countdown correctly read 14s) but it's slow; don't be surprised if it takes a couple of minutes of scripted clicking.
 
 ## Android project is generated, not committed
 
@@ -72,6 +87,6 @@ Five effects, sourced from `sound_src/*.wav` (gitignored, only the copies in `as
 - `sfx_select`: any tap on a number cell, whether it turns out right or wrong.
 - `sfx_fail`: every `_endGame()` call, win or lose — there's no `sfx_win`, so this is the only "round over" sound available and covers both.
 
-No mute/volume toggle was added (not requested) — unlike dino-egg-shooter's `SoundService`, there's no `enabledNotifier`/settings persistence here.
+A mute toggle was added 2026-08-24 (initially skipped, then requested) — `enabledNotifier`/`setEnabled`/`shared_preferences` persistence, same as dino-egg-shooter's `SoundService`. Lives as a `Switch` in the pause overlay (`_PauseOverlay`, `game_screen.dart`), not the main menu.
 
 **A `MissingPluginException` on the `xyz.luan/audioplayers.global/events` channel shows up in the browser console during local `flutter run -d web-server` testing** — this is a real gap in `audioplayers`' web support, not a bug in this app or a stale build; it doesn't crash anything (every play call is try/caught) and doesn't matter for shipping, since this app only builds for Android. Don't spend time chasing it.

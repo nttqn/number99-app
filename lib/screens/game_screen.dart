@@ -8,14 +8,33 @@ import '../services/admob_service.dart';
 import '../services/leaderboard_service.dart';
 import '../services/save_service.dart';
 import '../services/sound_service.dart';
+import '../widgets/level_announcement.dart';
 import '../widgets/pill_button.dart';
 
 const int _gridCols = 9;
 const int _gridRows = 11;
 const int _totalNumbers = _gridCols * _gridRows; // 99
-const double _roundSeconds = 10.0;
-const int _maxHints = 3;
-const int _hintPenalty = 10;
+
+// One level per grid row's worth of numbers found (9), so a 99-number board
+// runs exactly 11 levels. Round countdown shrinks a second per level down to
+// a floor of 5s; score-per-catch and the hint penalty both scale up with
+// level, and the hint budget shrinks — all deliberately, to keep the game
+// getting harder rather than just faster.
+const int _numbersPerLevel = 9;
+const int _maxLevel = _totalNumbers ~/ _numbersPerLevel; // 11
+const double _baseRoundSeconds = 15.0;
+const double _minRoundSeconds = 5.0;
+const int _baseMaxHints = 3;
+const int _baseHintPenalty = 10;
+
+double _roundSecondsForLevel(int level) =>
+    max(_minRoundSeconds, _baseRoundSeconds - (level - 1));
+
+double _scoreMultiplierForLevel(int level) => 1 + (level - 1) * 0.2;
+
+int _maxHintsForLevel(int level) => max(0, _baseMaxHints - ((level - 1) ~/ 3));
+
+int _hintPenaltyForLevel(int level) => _baseHintPenalty + (level - 1) * 5;
 
 class GameScreen extends StatefulWidget {
   const GameScreen({super.key});
@@ -28,9 +47,10 @@ class _GameScreenState extends State<GameScreen> {
   late List<int> _board;
   final Set<int> _found = {};
   int _target = 1;
-  double _timeLeft = _roundSeconds;
+  int _level = 1;
+  double _timeLeft = _baseRoundSeconds;
   int _score = 0;
-  int _hintsLeft = _maxHints;
+  int _hintsLeft = _baseMaxHints;
   Timer? _timer;
   bool _paused = false;
   bool _roundLocked = false;
@@ -40,6 +60,7 @@ class _GameScreenState extends State<GameScreen> {
   int? _hintIndex;
   int? _wrongFlashIndex;
   int? _correctFlashIndex;
+  int? _announcementLevel;
   int _highScore = 0;
 
   BannerAd? _bannerAd;
@@ -67,11 +88,13 @@ class _GameScreenState extends State<GameScreen> {
     _board = List.generate(_totalNumbers, (i) => i + 1)..shuffle();
     _found.clear();
     _score = 0;
-    _hintsLeft = _maxHints;
+    _level = 1;
+    _hintsLeft = _maxHintsForLevel(1);
     _paused = false;
     _gameOver = false;
     _won = false;
     _hintIndex = null;
+    _announcementLevel = 1;
     _startRound();
   }
 
@@ -81,15 +104,41 @@ class _GameScreenState extends State<GameScreen> {
       _endGame(won: true);
       return;
     }
+    final newLevel = min(_maxLevel, (_found.length ~/ _numbersPerLevel) + 1);
+    if (newLevel > _level) {
+      _level = newLevel;
+      _hintsLeft = min(_hintsLeft, _maxHintsForLevel(_level));
+      _reshuffleRemaining();
+      _announcementLevel = _level;
+    }
     remaining.shuffle();
     _target = remaining.first;
-    _timeLeft = _roundSeconds;
+    _timeLeft = _roundSecondsForLevel(_level);
     _roundLocked = false;
     _hintUsedThisRound = false;
     _hintIndex = null;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(milliseconds: 100), _tick);
     if (mounted) setState(() {});
+  }
+
+  /// Reshuffles which cell holds which *unfound* number, leaving already-found
+  /// cells untouched. Run on every level-up so a player can't just memorize
+  /// board positions over a long game — the challenge stays about scanning,
+  /// not recall.
+  void _reshuffleRemaining() {
+    final indices = <int>[];
+    final values = <int>[];
+    for (var i = 0; i < _board.length; i++) {
+      if (!_found.contains(_board[i])) {
+        indices.add(i);
+        values.add(_board[i]);
+      }
+    }
+    values.shuffle();
+    for (var i = 0; i < indices.length; i++) {
+      _board[indices[i]] = values[i];
+    }
   }
 
   void _tick(Timer t) {
@@ -113,7 +162,9 @@ class _GameScreenState extends State<GameScreen> {
       _timer?.cancel();
       final gained = _hintUsedThisRound
           ? 0
-          : (10 + (_timeLeft / _roundSeconds * 90)).round();
+          : ((10 + (_timeLeft / _roundSecondsForLevel(_level) * 90)) *
+                    _scoreMultiplierForLevel(_level))
+                .round();
       setState(() {
         _score += gained;
         _found.add(value);
@@ -142,7 +193,7 @@ class _GameScreenState extends State<GameScreen> {
       _hintsLeft -= 1;
       _hintIndex = idx;
       _hintUsedThisRound = true;
-      _score = max(0, _score - _hintPenalty);
+      _score = max(0, _score - _hintPenaltyForLevel(_level));
     });
     Future.delayed(const Duration(milliseconds: 1000), () {
       if (!mounted) return;
@@ -196,11 +247,24 @@ class _GameScreenState extends State<GameScreen> {
                       height: _bannerAd!.size.height.toDouble(),
                       child: AdWidget(ad: _bannerAd!),
                     ),
-                  _HudBar(timeLeft: _timeLeft, target: _target, score: _score),
+                  _HudBar(
+                    timeLeft: _timeLeft,
+                    target: _target,
+                    score: _score,
+                    level: _level,
+                  ),
                   Expanded(child: _buildGrid()),
                   _buildBottomBar(),
                 ],
               ),
+              if (_announcementLevel != null)
+                LevelAnnouncement(
+                  key: ValueKey(_announcementLevel),
+                  text: 'LEVEL $_announcementLevel',
+                  onComplete: () {
+                    if (mounted) setState(() => _announcementLevel = null);
+                  },
+                ),
               if (_paused && !_gameOver)
                 _PauseOverlay(
                   onResume: () {
@@ -338,11 +402,13 @@ class _HudBar extends StatelessWidget {
     required this.timeLeft,
     required this.target,
     required this.score,
+    required this.level,
   });
 
   final double timeLeft;
   final int target;
   final int score;
+  final int level;
 
   @override
   Widget build(BuildContext context) {
@@ -375,30 +441,44 @@ class _HudBar extends StatelessWidget {
               ],
             ),
           ),
-          Container(
-            width: 78,
-            height: 78,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFF33691E), width: 4),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 6,
-                  offset: const Offset(0, 3),
+          Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'LV $level',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                  color: Color(0xFF1B5E20),
                 ),
-              ],
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '$target',
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 30,
-                color: Color(0xFFD81B60),
               ),
-            ),
+              const SizedBox(height: 2),
+              Container(
+                width: 78,
+                height: 78,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: const Color(0xFF33691E), width: 4),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  '$target',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    fontSize: 30,
+                    color: Color(0xFFD81B60),
+                  ),
+                ),
+              ),
+            ],
           ),
           Expanded(
             child: Column(
