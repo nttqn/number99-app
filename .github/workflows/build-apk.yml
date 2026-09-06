@@ -191,9 +191,11 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Generate launcher icon
-        run: dart run flutter_launcher_icons
-
+      # No launcher-icon generation here: pubspec.yaml's flutter_launcher_icons
+      # config only enables `android: true` (the `build` job runs it against
+      # the android/ this job never generates), and this is a compile check
+      # only anyway — a missing custom icon doesn't fail a build, Xcode just
+      # uses its default placeholder.
       # --no-codesign: no certificate/provisioning profile exists yet, so
       # this can only produce an unsigned build product, not something
       # installable on a device or uploadable to App Store Connect.
