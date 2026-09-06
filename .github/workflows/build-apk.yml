@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android + iOS
 
 on:
   push:
@@ -163,3 +163,39 @@ jobs:
           name: number99-release-aab
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
+
+  # Compile-only iOS check, run in parallel with the Android job above.
+  # There's no Apple Developer Program membership for this app yet (that's
+  # a paid, human-only enrollment step — see CLAUDE.md), so this can't
+  # produce a signed .ipa or touch App Store Connect. All it proves is that
+  # the Dart code + plugins (google_mobile_ads, games_services, flame_audio
+  # all support iOS) actually compile for the platform, ahead of doing the
+  # real signing/submission setup once that membership exists.
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # ios/ is gitignored and regenerated fresh every run, same reasoning
+      # as android/ above.
+      - name: Generate iOS platform project
+        run: flutter create --platforms=ios --org com.nttqn --project-name number99 .
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate launcher icon
+        run: dart run flutter_launcher_icons
+
+      # --no-codesign: no certificate/provisioning profile exists yet, so
+      # this can only produce an unsigned build product, not something
+      # installable on a device or uploadable to App Store Connect.
+      - name: Build unsigned iOS release (compile check only)
+        run: flutter build ios --release --no-codesign

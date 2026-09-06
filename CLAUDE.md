@@ -6,7 +6,7 @@ Guidance for working in this repo. Same CI/Android/signing pattern as the siblin
 
 "99 Numbers" — a Flutter number-finding reflex game, rebuilt from the published `com.nttqn.number99` Play Store app (no original source was available). A 9x11 grid holds the numbers 1–99 in random order; the HUD shows a target number and a countdown (shrinks as level rises — see Levels below); tapping the matching cell scores points (more for a faster catch) and advances to the next target. Clearing the whole board doesn't end the run either — it advances the level and deals a fresh reshuffled board (see Levels) — **except on the final level (11)**, where clearing it is the win condition. A run otherwise ends when the countdown hits zero. All-English UI (switched from an initial Vietnamese menu/dialogs on 2026-08-24 for consistency with the HUD, which was always English to match the original screenshot's TIME/SCORE labels and RESTART/HINT/PAUSE button layout).
 
-No native `android/` or `web/` directory is committed — see "Android project is generated, not committed" below.
+No native `android/`, `ios/`, or `web/` directory is committed — see "Android project is generated, not committed" and "iOS" below.
 
 ## Commands
 
@@ -56,9 +56,17 @@ The **board reshuffle** the user also picked (to stop spatial memorization) is f
 
 `android/`, `web/`, etc. are gitignored. CI's `build-apk.yml` regenerates `android/` via `flutter create --platforms=android .` on every run, then patches in the AdMob App ID, raises `minSdk`/`compileSdk` for `google_mobile_ads`, enables release shrinking with WorkManager keep rules (`tool/proguard-rules-extra.pro`), generates the launcher icon from `assets/icon/icon.png`, and wires up release signing if the 4 keystore secrets are set. This is an exact copy of the dino-egg-shooter workflow — see that repo's CLAUDE.md for the reasoning behind each step (WorkManager R8 stripping crash, Kotlin-DSL-vs-Groovy handling, etc.) if any of it needs changing.
 
+## iOS
+
+Android-only until 2026-08-24, when the user asked about an App Store release. There is **no Apple Developer Program membership yet** (a paid, $99/year, human-only enrollment at developer.apple.com/programs — confirmed with the user before doing any of this) — without it there's no way to create certificates/provisioning profiles or an App Store Connect listing, so nothing here can be signed or submitted yet. This machine is Windows, so there's no local way to build/test iOS at all either (Xcode is macOS-only) — everything iOS has to happen through CI on a `macos-latest` GitHub Actions runner.
+
+What exists now is deliberately minimal: a `build-ios` job in `.github/workflows/build-apk.yml` (same file, parallel job) that regenerates `ios/` (gitignored, same `flutter create --platforms=ios --org com.nttqn` pattern as `android/`), generates the launcher icon (`flutter_launcher_icons`'s `ios: true` in `pubspec.yaml`), and runs `flutter build ios --release --no-codesign` — a **compile check only**. It proves the app's plugins (`google_mobile_ads`, `games_services`, `flame_audio` all claim iOS support) actually build for the platform; it produces no signed, installable, or uploadable artifact. Don't read a green run of this job as "ready for TestFlight" — it isn't.
+
+**Once the user has the Apple Developer Program membership**, the real pipeline still needs: an App ID + Bundle ID (this app has never shipped on iOS, so no existing-identity constraint like Android's keystore — a fresh setup is fine), a Distribution Certificate + Provisioning Profile (or, the modern/CI-friendlier approach, an App Store Connect API key for automatic signing — see Apple's and Flutter's docs on `xcodebuild -exportArchive`/fastlane), an `Info.plist` `GADApplicationIdentifier` entry for AdMob and a `GKGameCenterViewController`-style Game Center capability toggle for `games_services` (both currently un-patched, unlike the Android manifest patches in the `build` job), and an actual App Store Connect app record before any upload can succeed. None of this is set up — treat it as a from-scratch task when the time comes, not a small addition to the existing `build-ios` job.
+
 ## AdMob
 
-`lib/services/admob_service.dart` currently uses **Google's public TEST ad unit IDs**, not real ones — this app doesn't have its own AdMob account entries yet. Before a real release: create a banner + interstitial ad unit for this app in the AdMob console, swap the two `_bannerId`/`_interstitialId` constants, and set the `ADMOB_APP_ID` GitHub secret (see the "Patch AndroidManifest.xml" CI step).
+`lib/services/admob_service.dart` uses real ad unit IDs from the user's AdMob account (banner `ca-app-pub-9078637596840810/5513332487`, interstitial `.../4829149216` — same account as [[project_dino_egg_shooter]], different ad units). The AdMob **App ID** (a separate value — the `com.google.android.gms.ads.APPLICATION_ID` Android manifest meta-data / iOS `GADApplicationIdentifier`, driven by the `ADMOB_APP_ID` GitHub secret) is still unset for Android, and not wired up for iOS at all yet (see the iOS section above) — Android CI falls back to Google's public TEST App ID until that secret is added.
 
 ## Leaderboard (Google Play Games Services)
 
