@@ -3,7 +3,12 @@ name: Build Android + iOS
 on:
   push:
     branches: [main]
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      upload_ios:
+        description: "Also upload the signed iOS build to TestFlight/App Store Connect (only meaningful when the Apple secrets are set — see CLAUDE.md's iOS section)"
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -164,13 +169,12 @@ jobs:
           path: build/app/outputs/bundle/release/app-release.aab
           retention-days: 30
 
-  # Compile-only iOS check, run in parallel with the Android job above.
-  # There's no Apple Developer Program membership for this app yet (that's
-  # a paid, human-only enrollment step — see CLAUDE.md), so this can't
-  # produce a signed .ipa or touch App Store Connect. All it proves is that
-  # the Dart code + plugins (google_mobile_ads, games_services, flame_audio
-  # all support iOS) actually compile for the platform, ahead of doing the
-  # real signing/submission setup once that membership exists.
+  # Runs in parallel with the Android job above. Signs and archives a real
+  # .ipa once the 4 Apple secrets below are set (APPSTORE_API_KEY_P8/
+  # APPSTORE_API_KEY_ID/APPSTORE_API_ISSUER_ID/APPSTORE_TEAM_ID); otherwise
+  # it's still a useful compile-only check (proves google_mobile_ads,
+  # games_services, flame_audio all actually build for iOS) that no-ops
+  # past the signing/export/upload steps. See CLAUDE.md's iOS section.
   build-ios:
     runs-on: macos-latest
     steps:
@@ -191,13 +195,129 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      # No launcher-icon generation here: pubspec.yaml's flutter_launcher_icons
-      # config only enables `android: true` (the `build` job runs it against
-      # the android/ this job never generates), and this is a compile check
-      # only anyway — a missing custom icon doesn't fail a build, Xcode just
-      # uses its default placeholder.
-      # --no-codesign: no certificate/provisioning profile exists yet, so
-      # this can only produce an unsigned build product, not something
-      # installable on a device or uploadable to App Store Connect.
-      - name: Build unsigned iOS release (compile check only)
+      # Without this, google_mobile_ads crashes on first launch the moment
+      # MobileAds.instance.initialize() runs (an NSException, not a silent
+      # failure) — same underlying requirement as Android's manifest
+      # meta-data, but iOS has no AdMob app entry / App ID of its own yet
+      # (only the Android one exists in the user's AdMob account), so this
+      # always falls back to Google's public iOS TEST App ID for now. A real
+      # ADMOB_APP_ID_IOS secret can replace it once an iOS app is created in
+      # the AdMob console.
+      - name: Patch Info.plist (AdMob App ID)
+        env:
+          ADMOB_APP_ID_IOS: ${{ secrets.ADMOB_APP_ID_IOS }}
+        run: |
+          set -e
+          APP_ID="${ADMOB_APP_ID_IOS:-ca-app-pub-3940256099942544~1458002511}"
+          if [ -z "${ADMOB_APP_ID_IOS}" ]; then
+            echo "::warning::ADMOB_APP_ID_IOS secret not set — using Google's public iOS TEST AdMob App ID. Ads will show as test ads only until a real iOS AdMob app entry exists."
+          fi
+          plutil -replace GADApplicationIdentifier -string "$APP_ID" ios/Runner/Info.plist
+
+      # A separate flutter_launcher_icons_ios.yaml config (not pubspec.yaml's
+      # main one, which stays android-only) — the first attempt at iOS icons
+      # set `ios: true` in the shared pubspec.yaml config and broke *both*
+      # jobs at once, since flutter_launcher_icons reads that one config
+      # regardless of which job runs it (tried to write iOS icons into the
+      # Android job's run, which never generates ios/, and vice versa).
+      - name: Generate launcher icon
+        run: dart run flutter_launcher_icons -f flutter_launcher_icons_ios.yaml
+
+      # This machine has no Mac, so there's no Keychain Access to generate a
+      # CSR/certificate the traditional way. An App Store Connect API key
+      # sidesteps that entirely: xcodebuild's -allowProvisioningUpdates uses
+      # it to create/fetch whatever certificate + provisioning profile it
+      # needs on its own. Without the secret, this — and every step after
+      # it — is skipped, leaving just the unsigned compile check.
+      - name: Configure App Store Connect API key
+        id: apple_signing
+        env:
+          APPSTORE_API_KEY_P8: ${{ secrets.APPSTORE_API_KEY_P8 }}
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+        run: |
+          set -e
+          if [ -z "$APPSTORE_API_KEY_P8" ] || [ -z "$APPSTORE_API_KEY_ID" ]; then
+            echo "::warning::APPSTORE_API_KEY_P8/APPSTORE_API_KEY_ID not set — building unsigned (compile check only), no .ipa will be produced. See CLAUDE.md's iOS section."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          mkdir -p ~/private_keys
+          echo "$APPSTORE_API_KEY_P8" | base64 -d > ~/private_keys/AuthKey_${APPSTORE_API_KEY_ID}.p8
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+
+      # Always runs: resolves CocoaPods and compiles the Flutter side, same
+      # as before. Signing happens after, in the archive step, not here.
+      - name: Build iOS (compile + resolve pods)
         run: flutter build ios --release --no-codesign
+
+      - name: Archive and export signed IPA
+        if: steps.apple_signing.outputs.configured == 'true'
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+          APPSTORE_TEAM_ID: ${{ secrets.APPSTORE_TEAM_ID }}
+        run: |
+          set -e
+          KEY_PATH=~/private_keys/AuthKey_${APPSTORE_API_KEY_ID}.p8
+          cat > ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>app-store</string>
+            <key>teamID</key>
+            <string>${APPSTORE_TEAM_ID}</string>
+            <key>signingStyle</key>
+            <string>automatic</string>
+          </dict>
+          </plist>
+          PLIST
+          xcodebuild -workspace ios/Runner.xcworkspace \
+            -scheme Runner \
+            -sdk iphoneos \
+            -configuration Release \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$APPSTORE_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APPSTORE_API_ISSUER_ID" \
+            DEVELOPMENT_TEAM="$APPSTORE_TEAM_ID" \
+            CODE_SIGN_STYLE=Automatic \
+            archive
+          xcodebuild -exportArchive \
+            -archivePath build/ios/archive/Runner.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ExportOptions.plist \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$APPSTORE_API_KEY_ID" \
+            -authenticationKeyIssuerID "$APPSTORE_API_ISSUER_ID"
+
+      - name: Upload IPA artifact
+        if: steps.apple_signing.outputs.configured == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: number99-release-ipa
+          path: build/ios/ipa/*.ipa
+          retention-days: 30
+
+      # Only runs on a manual "Run workflow" trigger with the checkbox
+      # ticked — never on a plain push to main. Submitting a build to
+      # TestFlight/App Store Connect on every commit would be a surprising,
+      # hard-to-reverse side effect; this keeps it a deliberate, explicit
+      # action instead, the same way the Android job never auto-uploads the
+      # .aab to Play Console. Uses the same API key as signing, since this
+      # machine has no Mac to run Transporter or `xcrun altool` locally.
+      - name: Upload to TestFlight
+        if: steps.apple_signing.outputs.configured == 'true' && github.event_name == 'workflow_dispatch' && inputs.upload_ios == true
+        env:
+          APPSTORE_API_KEY_ID: ${{ secrets.APPSTORE_API_KEY_ID }}
+          APPSTORE_API_ISSUER_ID: ${{ secrets.APPSTORE_API_ISSUER_ID }}
+        run: |
+          set -e
+          xcrun altool --upload-app \
+            -f build/ios/ipa/*.ipa \
+            -t ios \
+            --apiKey "$APPSTORE_API_KEY_ID" \
+            --apiIssuer "$APPSTORE_API_ISSUER_ID"

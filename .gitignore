@@ -55,6 +55,8 @@ app.*.map.json
 *.jks
 *.keystore
 key.properties
+*.p8
+AuthKey_*
 
 # Original source art/audio — only the processed copies in assets/ are
 # actually shipped/used by the app.
