@@ -209,6 +209,23 @@ jobs:
       - name: Generate iOS platform project
         run: flutter create --platforms=ios --org com.nttqn --project-name number99 .
 
+      # Without this, the build fails with "Include of non-modular header
+      # inside framework module 'google_mobile_ads.FLTAd_Internal'" —
+      # google_mobile_ads' CocoaPods integration needs
+      # CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES=YES on every
+      # pod target, a well-known/long-standing requirement for this SDK
+      # under CocoaPods, not something specific to this project. Inserted
+      # into the Podfile's existing post_install target loop (right after
+      # the flutter_additional_ios_build_settings(target) call Flutter's
+      # own template already puts there) rather than replacing anything,
+      # since the exact wording of that line matters for `flutter build`'s
+      # own required Xcode integration to still work.
+      - name: Patch Podfile (CocoaPods module map fix for google_mobile_ads)
+        run: |
+          set -e
+          perl -0777 -pi -e "s/(flutter_additional_ios_build_settings\(target\))/\$1\n    target.build_configurations.each do |config|\n      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'\n    end/" ios/Podfile
+          cat ios/Podfile
+
       - name: Install dependencies
         run: flutter pub get
 
