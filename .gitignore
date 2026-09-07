@@ -57,6 +57,10 @@ app.*.map.json
 key.properties
 *.p8
 AuthKey_*
+*.cer
+*.p12
+*.mobileprovision
+*.certSigningRequest
 
 # Original source art/audio — only the processed copies in assets/ are
 # actually shipped/used by the app.
