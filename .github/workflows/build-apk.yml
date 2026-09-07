@@ -187,6 +187,23 @@ jobs:
           channel: stable
           cache: true
 
+      # Flutter 3.24+ defaults iOS plugin resolution to Swift Package
+      # Manager instead of CocoaPods. That's what caused the SPM-target
+      # signing failure below (each plugin becomes its own Package.swift
+      # target, and those targets don't support having a provisioning
+      # profile at all — command-line CODE_SIGN_STYLE=Manual/
+      # PROVISIONING_PROFILE_SPECIFIER overrides apply project-wide, not
+      # just to Runner, so they land on those targets too and Xcode
+      # rejects it: "does not support provisioning profiles ... Set the
+      # provisioning profile value to Automatic"). Forcing CocoaPods
+      # instead avoids the problem entirely — plugins become Pods embedded
+      # into a single aggregate framework that signs normally alongside
+      # Runner, the same mature path Flutter iOS builds have used for
+      # years. This is a Flutter *tool* setting (not project-level), so it
+      # has to be set again on every fresh runner.
+      - name: Force CocoaPods instead of Swift Package Manager
+        run: flutter config --no-enable-swift-package-manager
+
       # ios/ is gitignored and regenerated fresh every run, same reasoning
       # as android/ above.
       - name: Generate iOS platform project
