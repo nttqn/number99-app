@@ -250,14 +250,22 @@ jobs:
       - name: Build iOS (compile + resolve pods)
         run: flutter build ios --release --no-codesign
 
-      # CODE_SIGN_IDENTITY="Apple Distribution" is required, not optional:
-      # without it, `archive` with CODE_SIGN_STYLE=Automatic defaults to
-      # requesting an *iOS App Development* profile instead of the
-      # Distribution one an App Store archive actually needs — which then
-      # fails outright with "Your team has no devices from which to
-      # generate a provisioning profile" (Development profiles require
-      # registered device UDIDs; Distribution ones don't, which is the
-      # actual tell that the wrong profile type was being requested).
+      # -destination "generic/platform=iOS" turned out to be the actual
+      # missing piece, not a CODE_SIGN_IDENTITY override (tried and reverted
+      # — see git history). Without an explicit generic destination,
+      # automatic signing resolved the archive as a "development" signing
+      # context on its own (-configuration Release alone wasn't enough to
+      # signal otherwise), and then forcing CODE_SIGN_IDENTITY="Apple
+      # Distribution" on top of that just produced a *different* failure:
+      # "conflicting provisioning settings ... automatically signed for
+      # development, but a conflicting code signing identity Apple
+      # Distribution has been manually specified" — across every target,
+      # including the Swift-Package-Manager-based plugin targets
+      # (google_mobile_ads, webview_flutter_wkwebview, etc.), confirming it
+      # was a project-wide destination/context problem, not a per-target
+      # signing quirk. `generic/platform=iOS` is the standard "building for
+      # distribution, not tied to a specific device" destination and lets
+      # automatic signing resolve to Distribution on its own.
       - name: Archive and export signed IPA
         if: steps.apple_signing.outputs.configured == 'true'
         env:
@@ -285,6 +293,7 @@ jobs:
             -scheme Runner \
             -sdk iphoneos \
             -configuration Release \
+            -destination "generic/platform=iOS" \
             -archivePath build/ios/archive/Runner.xcarchive \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$KEY_PATH" \
@@ -292,7 +301,6 @@ jobs:
             -authenticationKeyIssuerID "$APPSTORE_API_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPSTORE_TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
