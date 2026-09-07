@@ -250,6 +250,14 @@ jobs:
       - name: Build iOS (compile + resolve pods)
         run: flutter build ios --release --no-codesign
 
+      # CODE_SIGN_IDENTITY="Apple Distribution" is required, not optional:
+      # without it, `archive` with CODE_SIGN_STYLE=Automatic defaults to
+      # requesting an *iOS App Development* profile instead of the
+      # Distribution one an App Store archive actually needs — which then
+      # fails outright with "Your team has no devices from which to
+      # generate a provisioning profile" (Development profiles require
+      # registered device UDIDs; Distribution ones don't, which is the
+      # actual tell that the wrong profile type was being requested).
       - name: Archive and export signed IPA
         if: steps.apple_signing.outputs.configured == 'true'
         env:
@@ -284,6 +292,7 @@ jobs:
             -authenticationKeyIssuerID "$APPSTORE_API_ISSUER_ID" \
             DEVELOPMENT_TEAM="$APPSTORE_TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             archive
           xcodebuild -exportArchive \
             -archivePath build/ios/archive/Runner.xcarchive \
