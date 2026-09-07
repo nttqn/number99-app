@@ -226,6 +226,20 @@ jobs:
           perl -0777 -pi -e "s/(flutter_additional_ios_build_settings\(target\))/\$1\n    target.build_configurations.each do |config|\n      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'\n    end/" ios/Podfile
           cat ios/Podfile
 
+      # The Podfile patch above sets this for every *pod* target, but the
+      # same "non-modular header" error persisted afterwards anyway — it
+      # also needs to be on the Runner *app* target's own build settings,
+      # which come from these two files (both just `#include
+      # "Generated.xcconfig"` by default), not only from whatever CocoaPods
+      # generates for its own pod targets.
+      - name: Patch Debug/Release.xcconfig (same module map fix, for the Runner target)
+        run: |
+          set -e
+          for f in ios/Flutter/Debug.xcconfig ios/Flutter/Release.xcconfig; do
+            echo 'CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES = YES' >> "$f"
+            cat "$f"
+          done
+
       - name: Install dependencies
         run: flutter pub get
 
