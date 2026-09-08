@@ -15,7 +15,7 @@ import 'package:games_services/games_services.dart';
 /// failed ad load never blocks gameplay in AdmobService.
 class LeaderboardService {
   static const _androidLeaderboardId = 'CgkIst2gm-UKEAIQAA';
-  static const _iosLeaderboardId = 'REPLACE_IOS_LEADERBOARD_ID';
+  static const _iosLeaderboardId = 'highscore';
 
   static bool get _isSupported =>
       !kIsWeb &&
