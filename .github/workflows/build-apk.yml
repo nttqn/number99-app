@@ -261,6 +261,13 @@ jobs:
             echo "::warning::ADMOB_APP_ID_IOS secret not set — using Google's public iOS TEST AdMob App ID. Ads will show as test ads only until a real iOS AdMob app entry exists."
           fi
           plutil -replace GADApplicationIdentifier -string "$APP_ID" ios/Runner/Info.plist
+          # Declares upfront that the app doesn't implement any encryption
+          # beyond standard HTTPS handled by iOS itself (true here — AdMob
+          # and Game Center both just make normal HTTPS calls, nothing
+          # custom). Without this, App Store Connect prompts for an "Export
+          # Compliance" answer on every single build upload; with it, the
+          # answer is baked in and the prompt is skipped.
+          plutil -replace ITSAppUsesNonExemptEncryption -bool NO ios/Runner/Info.plist
 
       # A separate flutter_launcher_icons_ios.yaml config (not pubspec.yaml's
       # main one, which stays android-only) — the first attempt at iOS icons
