@@ -243,6 +243,23 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
+      # ios/ is regenerated fresh every run (see above), so the Game Center
+      # entitlement can't just live in the repo's ios/ tree — it's kept
+      # outside as tool/Runner.entitlements and copied in here, then wired
+      # into the Runner target's own Release config the same way the
+      # module-map fix and the signing settings below are: via
+      # Release.xcconfig, never as an xcodebuild command-line override
+      # (those apply to every target in the build, not just Runner — see
+      # the "Configure Runner-only signing settings" step's comment). The
+      # App ID already had the Game Center capability enabled when it was
+      # created, so no provisioning-profile regeneration was needed for
+      # this addition.
+      - name: Install Game Center entitlement
+        run: |
+          set -e
+          cp tool/Runner.entitlements ios/Runner/Runner.entitlements
+          echo 'CODE_SIGN_ENTITLEMENTS = Runner/Runner.entitlements' >> ios/Flutter/Release.xcconfig
+
       # Without this, google_mobile_ads crashes on first launch the moment
       # MobileAds.instance.initialize() runs (an NSException, not a silent
       # failure) — same underlying requirement as Android's manifest
