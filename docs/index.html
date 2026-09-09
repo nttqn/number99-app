@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>99 Numbers — a fast number-finding reflex game</title>
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    margin: 0;
+    color: #1a1a1a;
+    background: #f5f5f7;
+  }
+  header {
+    background: linear-gradient(180deg, #BEE7B8, #a8dfa0);
+    text-align: center;
+    padding: 56px 20px 40px;
+  }
+  .badge {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    background: #fff;
+    border: 6px solid #2E7D32;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 38px;
+    font-weight: 900;
+    color: #D81B60;
+  }
+  h1 { font-size: 32px; margin: 0 0 8px; color: #1B5E20; }
+  .tagline { font-size: 17px; color: #2e5e2b; max-width: 460px; margin: 0 auto; }
+  .stores {
+    display: flex;
+    gap: 14px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 28px;
+  }
+  .store-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: #1a1a1a;
+    color: #fff;
+    text-decoration: none;
+    padding: 12px 22px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .store-btn.disabled {
+    background: #9aa0a6;
+    pointer-events: none;
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 48px 20px 80px; }
+  .shots {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 56px;
+  }
+  .shots img {
+    width: 220px;
+    max-width: 80vw;
+    border-radius: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  h2 { font-size: 24px; text-align: center; margin-bottom: 28px; }
+  .features {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 24px;
+    margin-bottom: 16px;
+  }
+  .feature { background: #fff; border-radius: 14px; padding: 20px; }
+  .feature h3 { margin: 0 0 8px; font-size: 17px; }
+  .feature p { margin: 0; color: #555; font-size: 14px; line-height: 1.5; }
+  footer {
+    text-align: center;
+    padding: 32px 20px 48px;
+    color: #666;
+    font-size: 14px;
+  }
+  footer a { color: #1a56db; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="badge">99</div>
+  <h1>99 Numbers</h1>
+  <p class="tagline">A 9×11 grid, one target number, and a shrinking clock. Find it
+  before time runs out — the faster you tap, the higher you score.</p>
+  <div class="stores">
+    <a class="store-btn" href="https://play.google.com/store/apps/details?id=com.nttqn.number99" target="_blank" rel="noopener">▶ Get it on Google Play</a>
+    <a class="store-btn disabled" href="#" aria-disabled="true"> Coming soon on the App Store</a>
+  </div>
+</header>
+
+<main>
+  <div class="shots">
+    <img src="img/menu.png" alt="99 Numbers main menu">
+    <img src="img/gameplay.png" alt="99 Numbers gameplay, a 9 by 11 grid of numbers with a target number and countdown timer">
+  </div>
+
+  <h2>How it plays</h2>
+  <div class="features">
+    <div class="feature">
+      <h3>Beat the clock</h3>
+      <p>Tap the number shown at the top before the timer runs out — the quicker you find it, the more points you earn.</p>
+    </div>
+    <div class="feature">
+      <h3>11 levels of pressure</h3>
+      <p>Clear the whole board to advance — each level reshuffles the grid and shaves a second off the clock.</p>
+    </div>
+    <div class="feature">
+      <h3>Hints when you're stuck</h3>
+      <p>A limited hint budget reveals the target's location for a small score penalty, shrinking as levels get harder.</p>
+    </div>
+    <div class="feature">
+      <h3>Global leaderboard</h3>
+      <p>Compare your best score with everyone else via Google Play Games or Game Center.</p>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <a href="support.html">Support</a> · <a href="privacy.html">Privacy Policy</a>
+</footer>
+
+</body>
+</html>
