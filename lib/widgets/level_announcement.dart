@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/responsive.dart';
+
 /// Big bold banner text ("LEVEL 3", ...) that pops into the center of the
 /// screen, holds, then shrinks away — 2 seconds total. Same choreography as
 /// dino-egg-shooter's AnnouncementText (a Flame component there; this is
@@ -67,18 +69,19 @@ class _LevelAnnouncementState extends State<LevelAnnouncement>
   Widget build(BuildContext context) {
     // IgnorePointer: this is a decorative overlay, not a blocker — the round
     // timer keeps running underneath and the player can keep tapping.
+    final scale = uiScale(context);
     return IgnorePointer(
       child: Center(
         child: ScaleTransition(
           scale: _scale,
           child: Text(
             widget.text,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 44,
+              fontSize: 44 * scale,
               fontWeight: FontWeight.w900,
               letterSpacing: 3,
-              shadows: [
+              shadows: const [
                 Shadow(
                   color: Colors.black87,
                   blurRadius: 10,

@@ -8,6 +8,7 @@ import '../services/admob_service.dart';
 import '../services/leaderboard_service.dart';
 import '../services/save_service.dart';
 import '../services/sound_service.dart';
+import '../utils/responsive.dart';
 import '../widgets/level_announcement.dart';
 import '../widgets/pill_button.dart';
 
@@ -310,6 +311,14 @@ class _GameScreenState extends State<GameScreen> {
               (constraints.maxWidth - spacing * (_gridCols - 1)) / _gridCols;
           final cellHeight =
               (constraints.maxHeight - spacing * (_gridRows - 1)) / _gridRows;
+          // Font/border/icon sized off the *actual* rendered cell (not a
+          // global screen-size scale factor) so digits stay legible whether
+          // the grid is squeezed onto a small phone or given a whole iPad's
+          // worth of space to spread out in — cells that are physically
+          // bigger get bigger numbers automatically.
+          final cellMin = min(cellWidth, cellHeight);
+          final cellFontSize = (cellMin * 0.42).clamp(12.0, 40.0);
+          final cellBorderWidth = (cellMin * 0.045).clamp(2.0, 5.0);
           return GridView.builder(
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _totalNumbers,
@@ -331,6 +340,8 @@ class _GameScreenState extends State<GameScreen> {
                 hinted: isHint,
                 wrongFlash: isWrong,
                 correctFlash: isCorrectFlash,
+                fontSize: cellFontSize,
+                borderWidth: cellBorderWidth,
                 onTap: () => _onCellTap(index),
               );
             },
@@ -341,8 +352,12 @@ class _GameScreenState extends State<GameScreen> {
   }
 
   Widget _buildBottomBar() {
+    final scale = uiScale(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: EdgeInsets.symmetric(
+        horizontal: 16 * scale,
+        vertical: 14 * scale,
+      ),
       decoration: const BoxDecoration(color: Color(0xFFFCE4EC)),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -358,7 +373,7 @@ class _GameScreenState extends State<GameScreen> {
               },
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10 * scale),
           Expanded(
             child: PillButton(
               label: 'HINT',
@@ -368,7 +383,7 @@ class _GameScreenState extends State<GameScreen> {
               onPressed: _hintsLeft > 0 ? _useHint : null,
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 10 * scale),
           Expanded(
             child: PillButton(
               label: _paused ? 'RESUME' : 'PAUSE',
@@ -406,20 +421,24 @@ class _HudBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final urgent = timeLeft <= 3;
+    final scale = uiScale(context);
     return Container(
       color: const Color(0xFF9CCC65),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+      padding: EdgeInsets.symmetric(
+        vertical: 10 * scale,
+        horizontal: 12 * scale,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
             child: Column(
               children: [
-                const Text(
+                Text(
                   'TIME',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 14,
+                    fontSize: 14 * scale,
                     color: Colors.white,
                   ),
                 ),
@@ -427,7 +446,7 @@ class _HudBar extends StatelessWidget {
                   timeLeft.ceil().toString(),
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 26,
+                    fontSize: 26 * scale,
                     color: urgent ? Colors.red : const Color(0xFFB71C1C),
                   ),
                 ),
@@ -439,20 +458,23 @@ class _HudBar extends StatelessWidget {
             children: [
               Text(
                 'LV $level',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                  color: Color(0xFF1B5E20),
+                  fontSize: 12 * scale,
+                  color: const Color(0xFF1B5E20),
                 ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: 2 * scale),
               Container(
-                width: 78,
-                height: 78,
+                width: 78 * scale,
+                height: 78 * scale,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(14),
-                  border: Border.all(color: const Color(0xFF33691E), width: 4),
+                  border: Border.all(
+                    color: const Color(0xFF33691E),
+                    width: 4 * scale,
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.black.withValues(alpha: 0.2),
@@ -464,10 +486,10 @@ class _HudBar extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   '$target',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 30,
-                    color: Color(0xFFD81B60),
+                    fontSize: 30 * scale,
+                    color: const Color(0xFFD81B60),
                   ),
                 ),
               ),
@@ -476,20 +498,20 @@ class _HudBar extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                const Text(
+                Text(
                   'SCORE',
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 14,
+                    fontSize: 14 * scale,
                     color: Colors.white,
                   ),
                 ),
                 Text(
                   '$score',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontWeight: FontWeight.w900,
-                    fontSize: 26,
-                    color: Color(0xFF1B5E20),
+                    fontSize: 26 * scale,
+                    color: const Color(0xFF1B5E20),
                   ),
                 ),
               ],
@@ -508,6 +530,8 @@ class _NumberCell extends StatelessWidget {
     required this.hinted,
     required this.wrongFlash,
     required this.correctFlash,
+    required this.fontSize,
+    required this.borderWidth,
     required this.onTap,
   });
 
@@ -516,6 +540,8 @@ class _NumberCell extends StatelessWidget {
   final bool hinted;
   final bool wrongFlash;
   final bool correctFlash;
+  final double fontSize;
+  final double borderWidth;
   final VoidCallback onTap;
 
   @override
@@ -542,16 +568,20 @@ class _NumberCell extends StatelessWidget {
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: border, width: 2),
+          border: Border.all(color: border, width: borderWidth),
         ),
         alignment: Alignment.center,
         child: found
-            ? const Icon(Icons.check, size: 16, color: Color(0xFFB0BEC5))
+            ? Icon(
+                Icons.check,
+                size: fontSize * 1.05,
+                color: const Color(0xFFB0BEC5),
+              )
             : Text(
                 '$value',
-                style: const TextStyle(
+                style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  fontSize: 15,
+                  fontSize: fontSize,
                   color: Colors.white,
                 ),
               ),
@@ -573,6 +603,7 @@ class _PauseOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = uiScale(context);
     return Container(
       // Fully opaque — unlike the game-over overlay, this one must hide the
       // board completely. A translucent pause screen would let a player
@@ -583,21 +614,21 @@ class _PauseOverlay extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
+            Icon(
               Icons.pause_circle_filled,
               color: Colors.white,
-              size: 64,
+              size: 64 * scale,
             ),
-            const SizedBox(height: 12),
-            const Text(
+            SizedBox(height: 12 * scale),
+            Text(
               'PAUSED',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 28,
+                fontSize: 28 * scale,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16 * scale),
             ValueListenableBuilder<bool>(
               valueListenable: SoundService.enabledNotifier,
               builder: (context, enabled, _) => Row(
@@ -606,16 +637,29 @@ class _PauseOverlay extends StatelessWidget {
                   Icon(
                     enabled ? Icons.volume_up : Icons.volume_off,
                     color: Colors.white70,
+                    size: 24 * scale,
                   ),
-                  const SizedBox(width: 8),
-                  const Text('Sound', style: TextStyle(color: Colors.white70)),
+                  SizedBox(width: 8 * scale),
+                  Text(
+                    'Sound',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14 * scale,
+                    ),
+                  ),
+                  SizedBox(width: 8 * scale),
+                  // Not scaled with the rest of the overlay: Transform.scale
+                  // enlarges the Switch visually without reserving the extra
+                  // layout space, which overlapped the "Sound" label on a
+                  // tablet-sized `scale` — its default size is already a
+                  // comfortable tap target on any screen.
                   Switch(value: enabled, onChanged: SoundService.setEnabled),
                 ],
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8 * scale),
             SizedBox(
-              width: 200,
+              width: 200 * scale,
               child: PillButton(
                 label: 'RESUME',
                 color: Colors.green,
@@ -623,9 +667,9 @@ class _PauseOverlay extends StatelessWidget {
                 onPressed: onResume,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12 * scale),
             SizedBox(
-              width: 200,
+              width: 200 * scale,
               child: PillButton(
                 label: 'RESTART',
                 color: Colors.orange,
@@ -633,9 +677,9 @@ class _PauseOverlay extends StatelessWidget {
                 onPressed: onRestart,
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12 * scale),
             SizedBox(
-              width: 200,
+              width: 200 * scale,
               child: PillButton(
                 label: 'MENU',
                 color: Colors.blueGrey,
@@ -669,12 +713,16 @@ class _GameOverOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scale = uiScale(context);
     return Container(
       color: Colors.black.withValues(alpha: 0.7),
       child: Center(
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 32),
-          padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 24),
+          padding: EdgeInsets.symmetric(
+            vertical: 28 * scale,
+            horizontal: 24 * scale,
+          ),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -685,29 +733,32 @@ class _GameOverOverlay extends StatelessWidget {
               Icon(
                 won ? Icons.emoji_events : Icons.timer_off,
                 color: won ? Colors.amber : Colors.redAccent,
-                size: 56,
+                size: 56 * scale,
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12 * scale),
               Text(
                 won ? 'YOU WIN!' : "TIME'S UP!",
-                style: const TextStyle(
-                  fontSize: 24,
+                style: TextStyle(
+                  fontSize: 24 * scale,
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8 * scale),
               Text(
                 'Level reached: $level',
-                style: const TextStyle(fontSize: 16),
+                style: TextStyle(fontSize: 16 * scale),
               ),
-              Text('Score: $score', style: const TextStyle(fontSize: 18)),
+              Text('Score: $score', style: TextStyle(fontSize: 18 * scale)),
               Text(
                 'High Score: $highScore',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: 14 * scale,
+                  color: Colors.grey.shade600,
+                ),
               ),
-              const SizedBox(height: 20),
+              SizedBox(height: 20 * scale),
               SizedBox(
-                width: 200,
+                width: 200 * scale,
                 child: PillButton(
                   label: 'RESTART',
                   color: Colors.green,
@@ -715,9 +766,9 @@ class _GameOverOverlay extends StatelessWidget {
                   onPressed: onRestart,
                 ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10 * scale),
               SizedBox(
-                width: 200,
+                width: 200 * scale,
                 child: PillButton(
                   label: 'MENU',
                   color: Colors.blueGrey,

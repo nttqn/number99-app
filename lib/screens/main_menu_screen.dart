@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/leaderboard_service.dart';
 import '../services/save_service.dart';
 import '../services/sound_service.dart';
+import '../utils/responsive.dart';
 import '../widgets/pill_button.dart';
 import 'game_screen.dart';
 
@@ -52,90 +53,104 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final scale = uiScale(context);
     return Scaffold(
       backgroundColor: const Color(0xFFBEE7B8),
       body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _NumberBadge(),
-                const SizedBox(height: 24),
-                const Text(
-                  '99 NUMBERS',
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w900,
-                    color: Color(0xFF1B5E20),
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Find the right number\nbefore time runs out!',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 15, color: Colors.green.shade900),
-                ),
-                const SizedBox(height: 28),
-                Container(
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: constraints.maxHeight),
+              child: Center(
+                child: Padding(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 10,
+                    horizontal: 32,
+                    vertical: 24,
                   ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.emoji_events,
-                        color: Colors.amber,
-                        size: 22,
-                      ),
-                      const SizedBox(width: 8),
+                      _NumberBadge(scale: scale),
+                      SizedBox(height: 24 * scale),
                       Text(
-                        'High Score: $_highScore',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1B5E20),
+                        '99 NUMBERS',
+                        style: TextStyle(
+                          fontSize: 34 * scale,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF1B5E20),
+                          letterSpacing: 1,
+                        ),
+                      ),
+                      SizedBox(height: 8 * scale),
+                      Text(
+                        'Find the right number\nbefore time runs out!',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 15 * scale,
+                          color: Colors.green.shade900,
+                        ),
+                      ),
+                      SizedBox(height: 28 * scale),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 20 * scale,
+                          vertical: 10 * scale,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.1),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.emoji_events,
+                              color: Colors.amber,
+                              size: 22 * scale,
+                            ),
+                            SizedBox(width: 8 * scale),
+                            Text(
+                              'High Score: $_highScore',
+                              style: TextStyle(
+                                fontSize: 16 * scale,
+                                fontWeight: FontWeight.bold,
+                                color: const Color(0xFF1B5E20),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      SizedBox(height: 32 * scale),
+                      SizedBox(
+                        width: 220 * scale,
+                        child: PillButton(
+                          label: 'PLAY',
+                          color: Colors.green.shade600,
+                          icon: Icons.play_arrow,
+                          onPressed: _play,
+                        ),
+                      ),
+                      SizedBox(height: 12 * scale),
+                      SizedBox(
+                        width: 220 * scale,
+                        child: PillButton(
+                          label: 'LEADERBOARD',
+                          color: Colors.blueGrey.shade600,
+                          icon: Icons.leaderboard,
+                          onPressed: _openLeaderboard,
                         ),
                       ),
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
-                SizedBox(
-                  width: 220,
-                  child: PillButton(
-                    label: 'PLAY',
-                    color: Colors.green.shade600,
-                    icon: Icons.play_arrow,
-                    onPressed: _play,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                SizedBox(
-                  width: 220,
-                  child: PillButton(
-                    label: 'LEADERBOARD',
-                    color: Colors.blueGrey.shade600,
-                    icon: Icons.leaderboard,
-                    onPressed: _openLeaderboard,
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
@@ -145,15 +160,19 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
 }
 
 class _NumberBadge extends StatelessWidget {
+  const _NumberBadge({required this.scale});
+
+  final double scale;
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 110,
-      height: 110,
+      width: 110 * scale,
+      height: 110 * scale,
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF2E7D32), width: 6),
+        border: Border.all(color: const Color(0xFF2E7D32), width: 6 * scale),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.15),
@@ -163,12 +182,12 @@ class _NumberBadge extends StatelessWidget {
         ],
       ),
       alignment: Alignment.center,
-      child: const Text(
+      child: Text(
         '99',
         style: TextStyle(
-          fontSize: 44,
+          fontSize: 44 * scale,
           fontWeight: FontWeight.w900,
-          color: Color(0xFFD81B60),
+          color: const Color(0xFFD81B60),
         ),
       ),
     );

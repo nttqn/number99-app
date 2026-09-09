@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../utils/responsive.dart';
+
 /// A chunky, embossed-looking rounded button matching the original game's
 /// cartoony HUD button style (flat top color + darker bottom "shadow" edge).
 class PillButton extends StatelessWidget {
@@ -22,6 +24,7 @@ class PillButton extends StatelessWidget {
   Widget build(BuildContext context) {
     final disabled = onPressed == null;
     final baseColor = disabled ? Colors.grey.shade400 : color;
+    final scale = uiScale(context);
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -34,7 +37,10 @@ class PillButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(14),
             onTap: onPressed,
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+              padding: EdgeInsets.symmetric(
+                vertical: 14 * scale,
+                horizontal: 8 * scale,
+              ),
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
@@ -58,15 +64,15 @@ class PillButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, color: Colors.white, size: 20),
-                      const SizedBox(width: 6),
+                      Icon(icon, color: Colors.white, size: 20 * scale),
+                      SizedBox(width: 6 * scale),
                     ],
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w800,
-                        fontSize: 16,
+                        fontSize: 16 * scale,
                         letterSpacing: 0.5,
                       ),
                     ),
@@ -81,8 +87,11 @@ class PillButton extends StatelessWidget {
             top: -6,
             right: -6,
             child: Container(
-              padding: const EdgeInsets.all(4),
-              constraints: const BoxConstraints(minWidth: 20, minHeight: 20),
+              padding: EdgeInsets.all(4 * scale),
+              constraints: BoxConstraints(
+                minWidth: 20 * scale,
+                minHeight: 20 * scale,
+              ),
               decoration: const BoxDecoration(
                 color: Colors.redAccent,
                 shape: BoxShape.circle,
@@ -90,9 +99,9 @@ class PillButton extends StatelessWidget {
               alignment: Alignment.center,
               child: Text(
                 '$badge',
-                style: const TextStyle(
+                style: TextStyle(
                   color: Colors.white,
-                  fontSize: 12,
+                  fontSize: 12 * scale,
                   fontWeight: FontWeight.bold,
                 ),
               ),
