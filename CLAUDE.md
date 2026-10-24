@@ -29,7 +29,25 @@ Single `StatefulWidget` holds all game state — no separate state-management pa
 - **Scoring**: `(10 + (timeLeft / roundSeconds * 90)) * levelMultiplier`, rounded — an instant catch scores ~100 at level 1, scaling up with `_scoreMultiplierForLevel`. This curve (and the wrong-tap/hint behavior below) is a judgment call, not confirmed against the original app's exact numbers — adjust the constants in `game_screen.dart` if the user wants different tuning.
 - **Wrong taps**: no penalty, just a brief red flash (`_wrongFlashIndex`).
 - **Hints**: budget shrinks by level (`_maxHintsForLevel`) and each use's penalty grows by level (`_hintPenaltyForLevel`) — see Levels.
-- **High score**: single key in `shared_preferences` (`SaveService`), since there's only one game mode.
+- **High score**: Classic's high score is still the `high_score` prefs key (kept for existing players), now owned by `StatsService` alongside the per-mode bests — see "v1.3.0" below.
+
+## v1.3.0: modes, stats, achievements, rewarded ads, themes, haptics, share (2026-10-24)
+
+Designs were picked by me as "recommended" options and approved wholesale by the user — adjust freely if they ask.
+
+- **Modes** (`lib/models/game_mode.dart`, all in the one `GameScreen(mode:)`): **Classic** (unchanged rules + the extras below); **Daily** — board *and* target order seeded from the local date (`Random(yyyymmdd)`), so everyone gets the same board the same day; fixed 10s per number, one board, 3 hints. Only the first attempt per day counts (streak + leaderboard); `StatsService.startDailyAttempt` marks it used when it *starts* so quitting/killing can't re-roll, and RESTART is disabled mid-run in a counted attempt. Replays are "practice". **Zen** — find 1→99 in order, clock counts up, hint +5s, wrong tap +1s. **Time Attack** — one 60s clock, random targets, score = numbers found, wrong tap −1s, fresh board if cleared, no hints.
+- **Classic shuffle twist**: from level 6, the unfound numbers permute among unfound cells every 5 finds (every 3 from level 9). `_NumberCell`'s `AnimatedSwitcher` keyed by value makes the swap visible.
+- **Combo**: catch within 2.5s without a hint extends it; wrong tap / hint / slow catch resets. Classic/Daily: +5% per step, capped +50%. Shown under SCORE in the HUD.
+- **Rewarded ads** (`AdmobService.preloadRewarded/showRewarded`): Classic revive once per run (opaque overlay on timeout, only offered if an ad is loaded); +1 hint when out of hints in Classic/Zen, once per board. Interstitial is skipped on a run where a rewarded ad was watched. Android rewarded unit is real (`ca-app-pub-9078637596840810/4721117207`), iOS `ca-app-pub-9078637596840810/3408035537`.
+- **Stats/achievements** (`StatsService`, `AchievementService`, `lib/screens/stats_screen.dart`): 10 achievements, tracked locally, mirrored to Play Games/Game Center. Android IDs filled 2026-10-24 — 8 of them are the original 2014 achievements renamed in Play Console (published achievements can't be deleted), so 2014 players who unlocked e.g. "Beginner" now show "Full Board" unlocked; iOS IDs are the `key`-style strings, which must be created in App Store Connect with exactly those IDs). `syncAll()` resends on menu open to cover unlocks earned while signed out.
+- **Leaderboards**: `Board` enum in `leaderboard_service.dart` — classic (original), daily, zen (time, lower is better; ms on Play, hundredths on Game Center), timeAttack. Android IDs filled in 2026-10-24 (daily `CgkIst2gm-UKEAIQCg`, zen `...QCw`, timeAttack `...QDA`).
+- **Themes** (`ThemeService`, `lib/screens/themes_screen.dart`): Classic free; Ocean (level 4), Night (level 7), Sakura (7-day daily streak), Neon (Classic win). Flash colors (wrong/correct/hint) are intentionally not themed.
+- **Haptics** (`HapticService`, Flutter `HapticFeedback`, no permission): toggle in the pause overlay next to Sound.
+- **Share** (`ShareService`, `share_plus`): result card drawn directly on a `dart:ui` canvas (1080²), shared with a text + store link. CI adds `NSPhotoLibraryAddUsageDescription` to Info.plist, since iOS crashes on the share sheet's "Save Image" without it.
+- App lifecycle pause/inactive → auto-pause (except while a rewarded ad is showing).
+- `main()` awaits stats/theme/achievement loads with a 3s timeout before `runApp`, so a hung SharedPreferences can't freeze the splash.
+
+Verified via `flutter test` (streak, achievements, Zen tap flow) and Playwright screenshots of the menu, themes, stats, daily, pause and Time Attack result on web. **Not verifiable on web**: rewarded ads/revive, haptics, the share sheet/card, Play Games/Game Center submits — need a real device.
 
 ## Levels (`_level`, `game_screen.dart`)
 
@@ -136,3 +154,7 @@ Five effects, sourced from `sound_src/*.wav` (gitignored, only the copies in `as
 A mute toggle was added 2026-08-24 (initially skipped, then requested) — `enabledNotifier`/`setEnabled`/`shared_preferences` persistence, same as dino-egg-shooter's `SoundService`. Lives as a `Switch` in the pause overlay (`_PauseOverlay`, `game_screen.dart`), not the main menu.
 
 **A `MissingPluginException` on the `xyz.luan/audioplayers.global/events` channel shows up in the browser console during local `flutter run -d web-server` testing** — this is a real gap in `audioplayers`' web support, not a bug in this app or a stale build; it doesn't crash anything (every play call is try/caught) and doesn't matter for shipping, since this app only builds for Android. Don't spend time chasing it.
+
+## Game services icons (`store_assets/game_services/`)
+
+Leaderboard (`lb_*.png`) and achievement icons for the console uploads: `play_512/` for Play Console (512×512), `gamecenter_1024/` for App Store Connect (1024×1024). Achievement icons keep their artwork inside a centered circle since Game Center masks them round. Generated from SVG by `tool/game_services_icons.js` (Node + Playwright, rendered with the locally installed headless Chromium — its `executablePath` is hardcoded): `node tool/game_services_icons.js <outDir>`.

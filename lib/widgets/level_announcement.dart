@@ -76,6 +76,7 @@ class _LevelAnnouncementState extends State<LevelAnnouncement>
           scale: _scale,
           child: Text(
             widget.text,
+            textAlign: TextAlign.center,
             style: TextStyle(
               color: Colors.white,
               fontSize: 44 * scale,

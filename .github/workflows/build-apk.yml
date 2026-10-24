@@ -285,6 +285,10 @@ jobs:
           # Compliance" answer on every single build upload; with it, the
           # answer is baked in and the prompt is skipped.
           plutil -replace ITSAppUsesNonExemptEncryption -bool NO ios/Runner/Info.plist
+          # The result-card share sheet (share_plus, v1.3.0) offers "Save
+          # Image" — iOS kills the app on that tap if this usage string is
+          # missing.
+          plutil -replace NSPhotoLibraryAddUsageDescription -string "Save your 99 Numbers result card to Photos." ios/Runner/Info.plist
 
       # A separate flutter_launcher_icons_ios.yaml config (not pubspec.yaml's
       # main one, which stays android-only) — the first attempt at iOS icons

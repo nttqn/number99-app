@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 
@@ -28,6 +30,14 @@ class AdmobService {
       defaultTargetPlatform == TargetPlatform.iOS
       ? _iosInterstitialId
       : _androidInterstitialId;
+
+  // Rewarded ad units (revive / extra hint, v1.3.0).
+  static const _androidRewardedId = 'ca-app-pub-9078637596840810/4721117207';
+  static const _iosRewardedId = 'ca-app-pub-9078637596840810/3408035537';
+
+  static String get _rewardedId => defaultTargetPlatform == TargetPlatform.iOS
+      ? _iosRewardedId
+      : _androidRewardedId;
 
   static bool get _isSupported =>
       !kIsWeb &&
@@ -91,5 +101,48 @@ class AdmobService {
       },
     );
     ad.show();
+  }
+
+  static RewardedAd? _rewarded;
+
+  /// Whether a rewarded ad is loaded and [showRewarded] would show one —
+  /// the revive/extra-hint offers only appear when this is true.
+  static bool get rewardedReady => _rewarded != null;
+
+  static void preloadRewarded() {
+    if (!_isSupported || _rewarded != null) return;
+    RewardedAd.load(
+      adUnitId: _rewardedId,
+      request: const AdRequest(),
+      rewardedAdLoadCallback: RewardedAdLoadCallback(
+        onAdLoaded: (ad) => _rewarded = ad,
+        onAdFailedToLoad: (_) => _rewarded = null,
+      ),
+    );
+  }
+
+  /// Shows the preloaded rewarded ad. Completes with whether the player
+  /// earned the reward (watched to the end), once the ad is dismissed —
+  /// the game stays paused until then.
+  static Future<bool> showRewarded() {
+    final ad = _rewarded;
+    if (!_isSupported || ad == null) return Future.value(false);
+    _rewarded = null;
+    final done = Completer<bool>();
+    var earned = false;
+    ad.fullScreenContentCallback = FullScreenContentCallback(
+      onAdDismissedFullScreenContent: (ad) {
+        ad.dispose();
+        preloadRewarded();
+        if (!done.isCompleted) done.complete(earned);
+      },
+      onAdFailedToShowFullScreenContent: (ad, error) {
+        ad.dispose();
+        preloadRewarded();
+        if (!done.isCompleted) done.complete(false);
+      },
+    );
+    ad.show(onUserEarnedReward: (_, _) => earned = true);
+    return done.future;
   }
 }
