@@ -6,6 +6,7 @@ import 'screens/main_menu_screen.dart';
 import 'services/achievement_service.dart';
 import 'services/admob_service.dart';
 import 'services/haptic_service.dart';
+import 'services/music_service.dart';
 import 'services/sound_service.dart';
 import 'services/stats_service.dart';
 import 'services/theme_service.dart';
@@ -14,6 +15,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AdmobService.init();
   SoundService.preload();
+  MusicService.init();
   // The menu reads stats/theme synchronously, so load them before the first
   // frame — but with a timeout: a hung SharedPreferences.getInstance() (see
   // the shared_preferences_android pin in pubspec.yaml) must never leave

@@ -17,7 +17,11 @@ class SoundService {
   static const _menuBack = 'sfx_menu_back.wav';
   static const _hint = 'sfx_hint.wav';
   static const _select = 'sfx_select.wav';
-  static const _fail = 'sfx_fail.wav';
+  // The three below are synthesised by tool/gen_audio.js (v1.3.0); the five
+  // above are the original sound_src/ files.
+  static const _wrong = 'sfx_wrong.wav';
+  static const _gameOver = 'sfx_game_over.wav';
+  static const _win = 'sfx_win.wav';
 
   static const _enabledPrefKey = 'sound_enabled';
 
@@ -31,12 +35,29 @@ class SoundService {
   static Future<void> preload() async {
     await _loadEnabledState();
     try {
+      // Android: every audioplayers player requests audio focus on start by
+      // default, which pauses whichever player had it — i.e. every tap
+      // sound would cut the background music out. No focus for any player
+      // (MusicService passes the same context to FlameAudio.bgm itself,
+      // since the two inits race). iOS: ambient = mixes, obeys silent mode.
+      await AudioPlayer.global.setAudioContext(
+        AudioContext(
+          android: const AudioContextAndroid(
+            audioFocus: AndroidAudioFocus.none,
+          ),
+          iOS: AudioContextIOS(category: AVAudioSessionCategory.ambient),
+        ),
+      );
+    } catch (_) {}
+    try {
       await FlameAudio.audioCache.loadAll([
         _menuConfirm,
         _menuBack,
         _hint,
         _select,
-        _fail,
+        _wrong,
+        _gameOver,
+        _win,
       ]);
       _pools[_menuConfirm] = await FlameAudio.createPool(
         _menuConfirm,
@@ -45,7 +66,9 @@ class SoundService {
       _pools[_menuBack] = await FlameAudio.createPool(_menuBack, maxPlayers: 2);
       _pools[_hint] = await FlameAudio.createPool(_hint, maxPlayers: 2);
       _pools[_select] = await FlameAudio.createPool(_select, maxPlayers: 4);
-      _pools[_fail] = await FlameAudio.createPool(_fail, maxPlayers: 2);
+      _pools[_wrong] = await FlameAudio.createPool(_wrong, maxPlayers: 3);
+      _pools[_gameOver] = await FlameAudio.createPool(_gameOver, maxPlayers: 1);
+      _pools[_win] = await FlameAudio.createPool(_win, maxPlayers: 1);
     } catch (_) {
       // Missing audio hardware/permissions shouldn't block the game.
     }
@@ -80,11 +103,17 @@ class SoundService {
   /// The HINT button.
   static void playHint() => _play(_hint);
 
-  /// Tapping a number cell in the grid, right or wrong.
+  /// Tapping the right number cell.
   static void playSelect() => _play(_select);
 
-  /// Round/game ending (timeout or all numbers found).
-  static void playFail() => _play(_fail);
+  /// Tapping a wrong number cell.
+  static void playWrong() => _play(_wrong);
+
+  /// A run ending badly: Classic/Daily timeout, the revive offer.
+  static void playGameOver() => _play(_gameOver);
+
+  /// A run ending well: a win, a finished Zen run, a new best.
+  static void playWin() => _play(_win);
 
   static void _play(String file) {
     if (!enabled) return;

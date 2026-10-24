@@ -9,6 +9,7 @@ import '../services/achievement_service.dart';
 import '../services/admob_service.dart';
 import '../services/haptic_service.dart';
 import '../services/leaderboard_service.dart';
+import '../services/music_service.dart';
 import '../services/share_service.dart';
 import '../services/sound_service.dart';
 import '../services/stats_service.dart';
@@ -160,6 +161,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
       AdmobService.preloadRewarded();
     }
     LeaderboardService.signIn();
+    MusicService.playGame();
     _newGame();
     _ticker = Timer.periodic(const Duration(milliseconds: 100), _tick);
   }
@@ -310,7 +312,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     });
     if (!timedOut) return;
     if (_mode == GameMode.classic && !_revived && AdmobService.rewardedReady) {
-      SoundService.playFail();
+      SoundService.playGameOver();
       HapticService.wrong();
       setState(() => _reviveOffer = true);
     } else {
@@ -322,9 +324,9 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
     if (_frozen || _roundLocked) return;
     final value = _board[index];
     if (_found.contains(value)) return;
-    SoundService.playSelect();
 
     if (value == _target) {
+      SoundService.playSelect();
       final reactionMs = _sinceTargetMs;
       final fast = !_hintUsedThisRound && reactionMs <= _comboWindowMs;
       final combo = fast ? _combo + 1 : 0;
@@ -369,6 +371,7 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
         _startRound();
       });
     } else {
+      SoundService.playWrong();
       HapticService.wrong();
       setState(() {
         _combo = 0;
@@ -522,14 +525,15 @@ class _GameScreenState extends State<GameScreen> with WidgetsBindingObserver {
 
   Future<void> _endGame({required bool won, bool sfx = true}) async {
     if (_gameOver) return;
+    final newBest = _isNewBest(won);
     if (sfx) {
-      if (won) {
-        SoundService.playMenuConfirm();
+      // Time Attack always "ends on time", so it only celebrates a new best.
+      if (won || (_mode == GameMode.timeAttack && newBest)) {
+        SoundService.playWin();
       } else {
-        SoundService.playFail();
+        SoundService.playGameOver();
       }
     }
-    final newBest = _isNewBest(won);
     setState(() {
       _gameOver = true;
       _won = won;
@@ -1196,6 +1200,13 @@ class _PauseOverlay extends StatelessWidget {
                 ),
               ),
               SizedBox(height: 16 * scale),
+              _ToggleRow(
+                notifier: MusicService.enabledNotifier,
+                onChanged: MusicService.setEnabled,
+                label: 'Music',
+                onIcon: Icons.music_note,
+                offIcon: Icons.music_off,
+              ),
               _ToggleRow(
                 notifier: SoundService.enabledNotifier,
                 onChanged: SoundService.setEnabled,

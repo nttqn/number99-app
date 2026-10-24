@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/game_mode.dart';
 import '../services/achievement_service.dart';
 import '../services/leaderboard_service.dart';
+import '../services/music_service.dart';
 import '../services/sound_service.dart';
 import '../services/stats_service.dart';
 import '../services/theme_service.dart';
@@ -24,6 +25,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
   void initState() {
     super.initState();
     LeaderboardService.signIn().then((_) => AchievementService.syncAll());
+    MusicService.playMenu();
   }
 
   Future<void> _play(GameMode mode) async {
@@ -31,6 +33,7 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => GameScreen(mode: mode)));
+    MusicService.playMenu();
     // Stats changed during the run (high score, streak, theme unlocks).
     if (mounted) setState(() {});
   }
@@ -76,189 +79,273 @@ class _MainMenuScreenState extends State<MainMenuScreen> {
     return Scaffold(
       backgroundColor: theme.menuBg,
       body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            child: ConstrainedBox(
-              constraints: BoxConstraints(minHeight: constraints.maxHeight),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 32,
-                    vertical: 24,
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _NumberBadge(scale: scale, theme: theme),
-                      SizedBox(height: 20 * scale),
-                      Text(
-                        '99 NUMBERS',
-                        style: TextStyle(
-                          fontSize: 34 * scale,
-                          fontWeight: FontWeight.w900,
-                          color: theme.title,
-                          letterSpacing: 1,
-                        ),
+        child: Stack(
+          children: [
+            LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 24,
                       ),
-                      SizedBox(height: 6 * scale),
-                      Text(
-                        'Find the right number\nbefore time runs out!',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 15 * scale,
-                          color: theme.title.withValues(alpha: 0.8),
-                        ),
-                      ),
-                      SizedBox(height: 20 * scale),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 20 * scale,
-                          vertical: 10 * scale,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 6,
-                              offset: const Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.emoji_events,
-                              color: Colors.amber,
-                              size: 22 * scale,
-                            ),
-                            SizedBox(width: 8 * scale),
-                            Text(
-                              'High Score: ${StatsService.classicHighScore}',
-                              style: TextStyle(
-                                fontSize: 16 * scale,
-                                fontWeight: FontWeight.bold,
-                                color: const Color(0xFF1B5E20),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 24 * scale),
-                      SizedBox(
-                        width: buttonWidth,
-                        child: PillButton(
-                          label: 'PLAY',
-                          color: Colors.green.shade600,
-                          icon: Icons.play_arrow,
-                          onPressed: () => _play(GameMode.classic),
-                        ),
-                      ),
-                      SizedBox(height: 12 * scale),
-                      SizedBox(
-                        width: buttonWidth,
-                        child: PillButton(
-                          label: dailyDone
-                              ? 'DAILY · PRACTICE'
-                              : 'DAILY CHALLENGE',
-                          color: const Color(0xFFF57C00),
-                          icon: Icons.calendar_today,
-                          onPressed: () => _play(GameMode.daily),
-                        ),
-                      ),
-                      SizedBox(height: 4 * scale),
-                      Text(
-                        dailyNote,
-                        style: TextStyle(
-                          fontSize: 13 * scale,
-                          fontWeight: FontWeight.w600,
-                          color: theme.title,
-                        ),
-                      ),
-                      SizedBox(height: 12 * scale),
-                      SizedBox(
-                        width: buttonWidth,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: PillButton(
-                                label: 'ZEN',
-                                color: Colors.teal,
-                                icon: Icons.self_improvement,
-                                onPressed: () => _play(GameMode.zen),
-                              ),
-                            ),
-                            SizedBox(width: 10 * scale),
-                            Expanded(
-                              child: PillButton(
-                                label: '60s',
-                                color: const Color(0xFFE53935),
-                                icon: Icons.timer,
-                                onPressed: () => _play(GameMode.timeAttack),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 4 * scale),
-                      SizedBox(
-                        width: buttonWidth,
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: _ModeBest(
-                                text: StatsService.zenBestMs > 0
-                                    ? 'Best ${formatMillis(StatsService.zenBestMs)}'
-                                    : '1 → 99, no timer',
-                                color: theme.title,
-                              ),
-                            ),
-                            SizedBox(width: 10 * scale),
-                            Expanded(
-                              child: _ModeBest(
-                                text: StatsService.timeAttackBest > 0
-                                    ? 'Best ${StatsService.timeAttackBest}'
-                                    : 'Time Attack',
-                                color: theme.title,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 20 * scale),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _RoundIconButton(
-                            icon: Icons.leaderboard,
-                            label: 'Ranks',
-                            color: Colors.blueGrey.shade600,
-                            textColor: theme.title,
-                            onPressed: _openLeaderboard,
+                          _NumberBadge(scale: scale, theme: theme),
+                          SizedBox(height: 20 * scale),
+                          Text(
+                            '99 NUMBERS',
+                            style: TextStyle(
+                              fontSize: 34 * scale,
+                              fontWeight: FontWeight.w900,
+                              color: theme.title,
+                              letterSpacing: 1,
+                            ),
                           ),
-                          SizedBox(width: 20 * scale),
-                          _RoundIconButton(
-                            icon: Icons.insights,
-                            label: 'Stats',
-                            color: const Color(0xFF5E35B1),
-                            textColor: theme.title,
-                            onPressed: () => _push(const StatsScreen()),
+                          SizedBox(height: 6 * scale),
+                          Text(
+                            'Find the right number\nbefore time runs out!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 15 * scale,
+                              color: theme.title.withValues(alpha: 0.8),
+                            ),
                           ),
-                          SizedBox(width: 20 * scale),
-                          _RoundIconButton(
-                            icon: Icons.palette,
-                            label: 'Themes',
-                            color: const Color(0xFFD81B60),
-                            textColor: theme.title,
-                            onPressed: () => _push(const ThemesScreen()),
+                          SizedBox(height: 20 * scale),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20 * scale,
+                              vertical: 10 * scale,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.1),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 3),
+                                ),
+                              ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.emoji_events,
+                                  color: Colors.amber,
+                                  size: 22 * scale,
+                                ),
+                                SizedBox(width: 8 * scale),
+                                Text(
+                                  'High Score: ${StatsService.classicHighScore}',
+                                  style: TextStyle(
+                                    fontSize: 16 * scale,
+                                    fontWeight: FontWeight.bold,
+                                    color: const Color(0xFF1B5E20),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 24 * scale),
+                          SizedBox(
+                            width: buttonWidth,
+                            child: PillButton(
+                              label: 'PLAY',
+                              color: Colors.green.shade600,
+                              icon: Icons.play_arrow,
+                              onPressed: () => _play(GameMode.classic),
+                            ),
+                          ),
+                          SizedBox(height: 12 * scale),
+                          SizedBox(
+                            width: buttonWidth,
+                            child: PillButton(
+                              label: dailyDone
+                                  ? 'DAILY · PRACTICE'
+                                  : 'DAILY CHALLENGE',
+                              color: const Color(0xFFF57C00),
+                              icon: Icons.calendar_today,
+                              onPressed: () => _play(GameMode.daily),
+                            ),
+                          ),
+                          SizedBox(height: 4 * scale),
+                          Text(
+                            dailyNote,
+                            style: TextStyle(
+                              fontSize: 13 * scale,
+                              fontWeight: FontWeight.w600,
+                              color: theme.title,
+                            ),
+                          ),
+                          SizedBox(height: 12 * scale),
+                          SizedBox(
+                            width: buttonWidth,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: PillButton(
+                                    label: 'ZEN',
+                                    color: Colors.teal,
+                                    icon: Icons.self_improvement,
+                                    onPressed: () => _play(GameMode.zen),
+                                  ),
+                                ),
+                                SizedBox(width: 10 * scale),
+                                Expanded(
+                                  child: PillButton(
+                                    label: '60s',
+                                    color: const Color(0xFFE53935),
+                                    icon: Icons.timer,
+                                    onPressed: () => _play(GameMode.timeAttack),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 4 * scale),
+                          SizedBox(
+                            width: buttonWidth,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: _ModeBest(
+                                    text: StatsService.zenBestMs > 0
+                                        ? 'Best ${formatMillis(StatsService.zenBestMs)}'
+                                        : '1 → 99, no timer',
+                                    color: theme.title,
+                                  ),
+                                ),
+                                SizedBox(width: 10 * scale),
+                                Expanded(
+                                  child: _ModeBest(
+                                    text: StatsService.timeAttackBest > 0
+                                        ? 'Best ${StatsService.timeAttackBest}'
+                                        : 'Time Attack',
+                                    color: theme.title,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 20 * scale),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              _RoundIconButton(
+                                icon: Icons.leaderboard,
+                                label: 'Ranks',
+                                color: Colors.blueGrey.shade600,
+                                textColor: theme.title,
+                                onPressed: _openLeaderboard,
+                              ),
+                              SizedBox(width: 20 * scale),
+                              _RoundIconButton(
+                                icon: Icons.insights,
+                                label: 'Stats',
+                                color: const Color(0xFF5E35B1),
+                                textColor: theme.title,
+                                onPressed: () => _push(const StatsScreen()),
+                              ),
+                              SizedBox(width: 20 * scale),
+                              _RoundIconButton(
+                                icon: Icons.palette,
+                                label: 'Themes',
+                                color: const Color(0xFFD81B60),
+                                textColor: theme.title,
+                                onPressed: () => _push(const ThemesScreen()),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
+              ),
+            ),
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Row(
+                children: [
+                  _AudioToggle(
+                    notifier: MusicService.enabledNotifier,
+                    onChanged: MusicService.setEnabled,
+                    onIcon: Icons.music_note,
+                    offIcon: Icons.music_off,
+                    tooltip: 'Music',
+                    theme: theme,
+                  ),
+                  SizedBox(width: 8 * scale),
+                  _AudioToggle(
+                    notifier: SoundService.enabledNotifier,
+                    onChanged: SoundService.setEnabled,
+                    onIcon: Icons.volume_up,
+                    offIcon: Icons.volume_off,
+                    tooltip: 'Sound',
+                    theme: theme,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Round on/off button for music or sound effects. Music and sound are
+/// independent on purpose — muting one never silences the other.
+class _AudioToggle extends StatelessWidget {
+  const _AudioToggle({
+    required this.notifier,
+    required this.onChanged,
+    required this.onIcon,
+    required this.offIcon,
+    required this.tooltip,
+    required this.theme,
+  });
+
+  final ValueNotifier<bool> notifier;
+  final ValueChanged<bool> onChanged;
+  final IconData onIcon;
+  final IconData offIcon;
+  final String tooltip;
+  final GameTheme theme;
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = uiScale(context);
+    return ValueListenableBuilder<bool>(
+      valueListenable: notifier,
+      builder: (context, enabled, _) => Tooltip(
+        message: tooltip,
+        child: Material(
+          color: enabled ? Colors.white : Colors.white.withValues(alpha: 0.5),
+          shape: const CircleBorder(),
+          elevation: enabled ? 3 : 0,
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: () {
+              // Played *before* turning sound off / after turning it on, so
+              // the tap is audible either way it goes.
+              final next = !enabled;
+              if (!next) SoundService.playMenuBack();
+              onChanged(next);
+              if (next) SoundService.playMenuConfirm();
+            },
+            child: Padding(
+              padding: EdgeInsets.all(10 * scale),
+              child: Icon(
+                enabled ? onIcon : offIcon,
+                size: 24 * scale,
+                color: enabled ? theme.title : Colors.grey.shade600,
               ),
             ),
           ),
